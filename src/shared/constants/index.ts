@@ -9,4 +9,6 @@ export const APP_NAME = 'Student Life'
 export const STORAGE_KEYS = {
   auth: 'sl.auth',
   app: 'sl.app',
+  assignments: 'sl.assignments',
+  schedules: 'sl.schedules',
 } as const

@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { Menu, Search, Bell, ChevronDown } from 'lucide-vue-next'
 
-withDefaults(defineProps<{ title?: string }>(), { title: 'Dashboard' })
+const props = withDefaults(defineProps<{ title?: string }>(), { title: '' })
+
+// Title falls back to the active route's meta title, then "Dashboard".
+const route = useRoute()
+const title = computed(() => props.title || (route.meta.title as string) || 'Dashboard')
 
 // Reactive search state replaces the uncontrolled DOM input.
 const search = ref('')
