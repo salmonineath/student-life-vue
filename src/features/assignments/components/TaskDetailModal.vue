@@ -9,6 +9,7 @@ import {
   Paperclip,
   Plus,
   RotateCcw,
+  Save,
   Tag,
   Trash2,
   Users,
@@ -24,7 +25,9 @@ import {
   TASK_STATUS_ORDER,
 } from '@/features/assignments/helpers'
 import { useAssignmentStore } from '@/features/assignments/store/useAssignmentStore'
+import { useConfirm } from '@/shared/composables/useConfirm'
 import { useToasts } from '@/shared/composables/useToasts'
+import type { AssignmentTask } from '@/features/assignments/types'
 
 const open = defineModel<boolean>('open', { required: true })
 
@@ -34,6 +37,7 @@ const props = defineProps<{
 }>()
 
 const store = useAssignmentStore()
+const { confirm } = useConfirm()
 const { push } = useToasts()
 
 const assignment = computed(() => store.find(props.assignmentId))
@@ -41,9 +45,53 @@ const task = computed(() =>
   props.taskId === null ? undefined : assignment.value?.tasks.find((t) => t.id === props.taskId),
 )
 
-const isDone = computed(() => task.value?.status === 'done')
+// --- Draft: edits stay local until Save commits them to the store ---
+type TaskDraft = Pick<
+  AssignmentTask,
+  'title' | 'description' | 'status' | 'checklist' | 'assigneeIds' | 'attachments'
+>
 
-// Close automatically if the task disappears (e.g. deleted).
+function snapshot(t: AssignmentTask): TaskDraft {
+  return {
+    title: t.title,
+    description: t.description,
+    status: t.status,
+    checklist: t.checklist.map((c) => ({ ...c })),
+    assigneeIds: [...t.assigneeIds],
+    attachments: t.attachments.map((f) => ({ ...f })),
+  }
+}
+
+const draft = ref<TaskDraft | null>(null)
+/** Placeholder ids for items created while drafting; the store assigns real ids on save. */
+let tempId = -1
+
+watch(
+  [open, () => task.value?.id],
+  ([isOpen]) => {
+    if (isOpen && task.value) {
+      draft.value = snapshot(task.value)
+      tempId = -1
+    }
+  },
+  { immediate: true },
+)
+
+/** Anything changed since the modal opened (or was last saved)? */
+const isDirty = computed(
+  () =>
+    !!task.value &&
+    !!draft.value &&
+    JSON.stringify(draft.value) !== JSON.stringify(snapshot(task.value)),
+)
+
+const isDone = computed(() => draft.value?.status === 'done')
+
+function toggleDone(): void {
+  if (draft.value) draft.value.status = draft.value.status === 'done' ? 'todo' : 'done'
+}
+
+// Close automatically if the task disappears (e.g. deleted) — nothing to keep.
 watch(
   () => task.value,
   (t) => {
@@ -51,54 +99,90 @@ watch(
   },
 )
 
-// --- Editable title / description (write straight through to the store) ---
-const title = computed({
-  get: () => task.value?.title ?? '',
-  set: (v) => task.value && store.updateTask(props.assignmentId, task.value.id, { title: v }),
-})
-const description = computed({
-  get: () => task.value?.description ?? '',
-  set: (v) => task.value && store.updateTask(props.assignmentId, task.value.id, { description: v }),
-})
-
-// --- Checklist ---
+// --- Checklist (draft-local) ---
 const newItem = ref('')
-const checklistDone = computed(() => task.value?.checklist.filter((c) => c.done).length ?? 0)
-const checklistTotal = computed(() => task.value?.checklist.length ?? 0)
+const checklistDone = computed(() => draft.value?.checklist.filter((c) => c.done).length ?? 0)
+const checklistTotal = computed(() => draft.value?.checklist.length ?? 0)
 const checklistPct = computed(() =>
   checklistTotal.value ? Math.round((checklistDone.value / checklistTotal.value) * 100) : 0,
 )
 
 function addItem(): void {
-  if (!task.value || !newItem.value.trim()) return
-  store.addChecklistItem(props.assignmentId, task.value.id, newItem.value)
+  const text = newItem.value.trim()
+  if (!draft.value || !text) return
+  draft.value.checklist.push({ id: tempId--, text, done: false })
   newItem.value = ''
 }
 
-// --- Attachments (plain files — no side effects on status/progress) ---
+function toggleItem(itemId: number): void {
+  const item = draft.value?.checklist.find((c) => c.id === itemId)
+  if (item) item.done = !item.done
+}
+
+function removeItem(itemId: number): void {
+  if (draft.value) draft.value.checklist = draft.value.checklist.filter((c) => c.id !== itemId)
+}
+
+// --- Members (draft-local) ---
+function toggleAssignee(memberId: number): void {
+  if (!draft.value) return
+  draft.value.assigneeIds = draft.value.assigneeIds.includes(memberId)
+    ? draft.value.assigneeIds.filter((id) => id !== memberId)
+    : [...draft.value.assigneeIds, memberId]
+}
+
+// --- Attachments (draft-local; plain files — no side effects on status/progress) ---
 const fileInput = ref<HTMLInputElement | null>(null)
 function onFilesChosen(e: Event): void {
   const input = e.target as HTMLInputElement
   const files = Array.from(input.files ?? [])
-  if (files.length && task.value) {
+  if (files.length && draft.value) {
     for (const file of files) {
-      store.addAttachment(props.assignmentId, task.value.id, {
+      draft.value.attachments.push({
+        id: tempId--,
         name: file.name,
         size: file.size,
         uploadedAt: new Date().toISOString(),
       })
     }
-    push(files.length === 1 ? 'Attachment added' : `${files.length} attachments added`, 'paperclip', 'indigo')
   }
   input.value = ''
+}
+
+function removeAttachment(attachmentId: number): void {
+  if (draft.value)
+    draft.value.attachments = draft.value.attachments.filter((f) => f.id !== attachmentId)
+}
+
+// --- Save / close ---
+function save(): void {
+  if (!task.value || !draft.value) return
+  store.applyTaskDraft(props.assignmentId, task.value.id, draft.value)
+  push('Task saved', 'check', 'emerald')
+  close()
 }
 
 function close(): void {
   open.value = false
 }
 
+/** X button, overlay click and Escape land here so unsaved edits get a warning. */
+async function requestClose(): Promise<void> {
+  if (isDirty.value) {
+    const ok = await confirm({
+      title: 'Are you sure you want to leave this page?',
+      message: 'Once you close this modal, all unsaved progress will be lost.',
+      confirmLabel: 'Yes',
+      cancelLabel: 'No',
+      danger: true,
+    })
+    if (!ok) return
+  }
+  close()
+}
+
 function onKeydown(e: KeyboardEvent): void {
-  if (e.key === 'Escape') close()
+  if (e.key === 'Escape') void requestClose()
 }
 watch(open, (isOpen) => {
   if (isOpen) window.addEventListener('keydown', onKeydown)
@@ -109,9 +193,9 @@ watch(open, (isOpen) => {
 <template>
   <Teleport to="body">
     <div
-      v-if="open && task"
+      v-if="open && task && draft"
       class="modal-overlay fixed inset-0 z-50 flex items-start justify-center p-3 md:p-6 overflow-y-auto"
-      @click.self="close"
+      @click.self="requestClose"
     >
     <div
       class="modal-panel bg-white rounded-3xl w-full max-w-5xl min-h-[88vh] flex flex-col shadow-2xl"
@@ -124,13 +208,13 @@ watch(open, (isOpen) => {
             class="h-7 w-7 mt-1.5 shrink-0 rounded-lg border-2 grid place-items-center transition"
             :class="isDone ? 'border-emerald bg-emerald text-white' : 'border-border text-transparent hover:border-emerald'"
             :aria-label="isDone ? 'Mark not done' : 'Mark done'"
-            @click="store.toggleTask(assignmentId, task.id)"
+            @click="toggleDone"
           >
             <Check class="h-4 w-4" />
           </button>
           <div class="min-w-0 flex-1">
             <input
-              v-model="title"
+              v-model="draft.title"
               class="w-full bg-transparent font-display font-extrabold text-[24px] md:text-[26px] text-ink outline-none rounded-lg px-1.5 -ml-1.5 focus:bg-bg transition"
             />
             <p class="text-[13px] text-muted mt-1 px-1.5">
@@ -141,13 +225,25 @@ watch(open, (isOpen) => {
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          class="h-9 w-9 shrink-0 grid place-items-center rounded-xl border border-border text-muted hover:bg-bg transition"
-          @click="close"
-        >
-          <X class="h-4.5 w-4.5" />
-        </button>
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            class="h-9 px-4 flex items-center gap-1.5 rounded-xl text-white text-[13px] font-semibold shadow-md shadow-emerald/20 transition hover:-translate-y-0.5 disabled:opacity-40 disabled:shadow-none disabled:hover:translate-y-0 disabled:cursor-not-allowed"
+            style="background: linear-gradient(135deg, var(--emerald), var(--emerald-dark))"
+            :disabled="!isDirty"
+            @click="save"
+          >
+            <Save class="h-4 w-4" /> Save
+          </button>
+          <button
+            type="button"
+            class="h-9 w-9 grid place-items-center rounded-xl border border-border text-muted hover:bg-bg transition"
+            aria-label="Close"
+            @click="requestClose"
+          >
+            <X class="h-4.5 w-4.5" />
+          </button>
+        </div>
       </div>
 
       <!-- Body: main + sidebar -->
@@ -165,11 +261,11 @@ watch(open, (isOpen) => {
                 :key="s"
                 type="button"
                 class="text-[12.5px] font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5"
-                :class="task.status === s ? TASK_STATUS_META[s].activeClass : 'text-muted hover:text-ink'"
-                @click="store.setTaskStatus(assignmentId, task.id, s)"
+                :class="draft.status === s ? TASK_STATUS_META[s].activeClass : 'text-muted hover:text-ink'"
+                @click="draft.status = s"
               >
                 <span
-                  v-if="task.status !== s"
+                  v-if="draft.status !== s"
                   class="h-1.5 w-1.5 rounded-full"
                   :style="{ background: TASK_STATUS_META[s].dot }"
                 ></span>
@@ -184,7 +280,7 @@ watch(open, (isOpen) => {
               <AlignLeft class="h-4 w-4 text-muted" /> Description
             </p>
             <textarea
-              v-model="description"
+              v-model="draft.description"
               rows="5"
               class="w-full bg-bg border border-border rounded-xl px-4 py-3 text-[14px] outline-none focus:border-indigo focus:ring-2 focus:ring-indigo/20 transition resize-none"
               placeholder="Add a more detailed description…"
@@ -211,7 +307,7 @@ watch(open, (isOpen) => {
 
             <ul class="space-y-1">
               <li
-                v-for="item in task.checklist"
+                v-for="item in draft.checklist"
                 :key="item.id"
                 class="group flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-bg transition"
               >
@@ -219,7 +315,7 @@ watch(open, (isOpen) => {
                   type="button"
                   class="h-5 w-5 shrink-0 rounded border-2 grid place-items-center transition"
                   :class="item.done ? 'border-indigo bg-indigo text-white' : 'border-border text-transparent hover:border-indigo'"
-                  @click="store.toggleChecklistItem(assignmentId, task.id, item.id)"
+                  @click="toggleItem(item.id)"
                 >
                   <Check class="h-3 w-3" />
                 </button>
@@ -230,7 +326,7 @@ watch(open, (isOpen) => {
                   type="button"
                   class="opacity-0 group-hover:opacity-100 text-muted hover:text-danger-ink transition"
                   title="Remove item"
-                  @click="store.removeChecklistItem(assignmentId, task.id, item.id)"
+                  @click="removeItem(item.id)"
                 >
                   <Trash2 class="h-4 w-4" />
                 </button>
@@ -262,7 +358,7 @@ watch(open, (isOpen) => {
               ? 'border border-border text-muted hover:bg-bg'
               : 'text-white shadow-md shadow-emerald/20 hover:-translate-y-0.5'"
             :style="isDone ? '' : 'background: linear-gradient(135deg, var(--emerald), var(--emerald-dark))'"
-            @click="store.toggleTask(assignmentId, task.id)"
+            @click="toggleDone"
           >
             <component :is="isDone ? RotateCcw : Check" class="h-4 w-4" />
             {{ isDone ? 'Reopen task' : 'Mark complete' }}
@@ -279,14 +375,14 @@ watch(open, (isOpen) => {
                 :key="m.id"
                 type="button"
                 class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg border transition text-left"
-                :class="task.assigneeIds.includes(m.id)
+                :class="draft.assigneeIds.includes(m.id)
                   ? 'border-indigo bg-indigo/10 text-indigo-ink font-semibold'
                   : 'border-transparent text-muted hover:bg-bg'"
-                @click="store.toggleAssignee(assignmentId, task.id, m.id)"
+                @click="toggleAssignee(m.id)"
               >
                 <MemberAvatar :member="m" :size="26" :ring="false" />
                 <span class="text-[13px] flex-1">{{ m.name }}</span>
-                <Check v-if="task.assigneeIds.includes(m.id)" class="h-4 w-4 shrink-0" />
+                <Check v-if="draft.assigneeIds.includes(m.id)" class="h-4 w-4 shrink-0" />
               </button>
             </div>
           </div>
@@ -295,8 +391,8 @@ watch(open, (isOpen) => {
           <div>
             <p class="flex items-center gap-2 text-[12px] font-bold tracking-wide text-muted uppercase mb-2.5">
               <Paperclip class="h-3.5 w-3.5" /> Attachments
-              <span v-if="task.attachments.length" class="normal-case font-semibold">
-                ({{ task.attachments.length }})
+              <span v-if="draft.attachments.length" class="normal-case font-semibold">
+                ({{ draft.attachments.length }})
               </span>
             </p>
             <button
@@ -308,9 +404,9 @@ watch(open, (isOpen) => {
             </button>
             <input ref="fileInput" type="file" multiple class="hidden" @change="onFilesChosen" />
 
-            <ul v-if="task.attachments.length" class="mt-2.5 space-y-1.5">
+            <ul v-if="draft.attachments.length" class="mt-2.5 space-y-1.5">
               <li
-                v-for="file in task.attachments"
+                v-for="file in draft.attachments"
                 :key="file.id"
                 class="flex items-center gap-2 text-[12.5px] text-ink bg-bg border border-border rounded-lg px-3 py-2"
               >
@@ -321,7 +417,7 @@ watch(open, (isOpen) => {
                   type="button"
                   class="text-muted hover:text-danger-ink transition shrink-0"
                   title="Remove attachment"
-                  @click="store.removeAttachment(assignmentId, task.id, file.id)"
+                  @click="removeAttachment(file.id)"
                 >
                   <X class="h-3.5 w-3.5" />
                 </button>

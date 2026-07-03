@@ -144,6 +144,14 @@ export const useAssignmentStore = defineStore(
           .reduce((max, c) => Math.max(max, c.id), 0) + 1
       )
     }
+    function nextAttachmentId(): number {
+      return (
+        assignments.value
+          .flatMap((a) => a.tasks)
+          .flatMap((t) => t.attachments)
+          .reduce((max, f) => Math.max(max, f.id), 0) + 1
+      )
+    }
 
     /** Recompute progress from tasks (when any) and sync the completed flag. */
     function recompute(a: Assignment): void {
@@ -325,12 +333,7 @@ export const useAssignmentStore = defineStore(
     ): void {
       const t = findTask(assignmentId, taskId)
       if (!t) return
-      const nextId =
-        assignments.value
-          .flatMap((a) => a.tasks)
-          .flatMap((x) => x.attachments)
-          .reduce((max, f) => Math.max(max, f.id), 0) + 1
-      t.attachments.push({ id: nextId, ...file })
+      t.attachments.push({ id: nextAttachmentId(), ...file })
     }
 
     function removeAttachment(assignmentId: number, taskId: number, attachmentId: number): void {
@@ -353,6 +356,35 @@ export const useAssignmentStore = defineStore(
     function removeChecklistItem(assignmentId: number, taskId: number, itemId: number): void {
       const t = findTask(assignmentId, taskId)
       if (t) t.checklist = t.checklist.filter((c) => c.id !== itemId)
+    }
+
+    /**
+     * Commit the task modal's draft in one save. Checklist items and
+     * attachments created while drafting carry negative placeholder ids and
+     * receive real ids here.
+     */
+    function applyTaskDraft(
+      assignmentId: number,
+      taskId: number,
+      draft: Pick<
+        AssignmentTask,
+        'title' | 'description' | 'status' | 'checklist' | 'assigneeIds' | 'attachments'
+      >,
+    ): void {
+      const a = find(assignmentId)
+      const t = a?.tasks.find((x) => x.id === taskId)
+      if (!a || !t) return
+      let checklistId = nextChecklistId()
+      let attachmentId = nextAttachmentId()
+      t.title = draft.title
+      t.description = draft.description
+      t.status = draft.status
+      t.checklist = draft.checklist.map((c) => (c.id > 0 ? { ...c } : { ...c, id: checklistId++ }))
+      t.assigneeIds = [...draft.assigneeIds]
+      t.attachments = draft.attachments.map((f) =>
+        f.id > 0 ? { ...f } : { ...f, id: attachmentId++ },
+      )
+      recompute(a)
     }
 
     // --- Assignee actions ---
@@ -391,6 +423,7 @@ export const useAssignmentStore = defineStore(
       addChecklistItem,
       toggleChecklistItem,
       removeChecklistItem,
+      applyTaskDraft,
       toggleAssignee,
     }
   },

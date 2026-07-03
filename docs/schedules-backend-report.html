@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Schedules — Backend Requirements</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* ── Page & surface ── */
+      --bg:            #F7F6F3;   /* warm off-white page background */
+      --surface:       #FFFFFF;
+      --surface2:      #F5F4F1;   /* thead / info-card bg */
+      --border:        #E8E6E1;
+      --border-strong: #D4D0C8;
+
+      /* ── Accent (change this to match your doc's topic) ── */
+      --accent:        #047857;   /* dark emerald */
+      --accent-mid:    #059669;   /* emerald */
+      --accent-light:  #10B981;   /* light emerald */
+      --accent-pale:   #ECFDF5;   /* very pale emerald */
+      --accent-dim:    #A7F3D0;   /* emerald border */
+
+      /* ── Semantic colors ── */
+      --green:         #15803D;
+      --green-pale:    #F0FDF4;
+      --green-border:  #86EFAC;
+      --amber:         #92400E;
+      --amber-pale:    #FFFBEB;
+      --amber-border:  #FCD34D;
+      --red:           #B91C1C;
+      --red-pale:      #FEF2F2;
+      --red-border:    #FCA5A5;
+      --blue:          #1D4ED8;
+      --blue-pale:     #EFF6FF;
+      --blue-border:   #93C5FD;
+
+      /* ── Text ── */
+      --text:          #18181B;
+      --text-muted:    #6B6B71;
+      --text-dim:      #A1A1AA;
+
+      /* ── Code — GitHub Dark ── */
+      --code-bg:       #0D1117;
+      --code-surface:  #161B22;
+      --code-border:   #30363D;
+      --code-default:  #C9D1D9;
+      --code-kw:       #FF7B72;   /* keywords */
+      --code-fn:       #D2A8FF;   /* functions */
+      --code-str:      #A5D6FF;   /* strings */
+      --code-num:      #79C0FF;   /* numbers */
+      --code-cls:      #FFA657;   /* classes */
+      --code-ann:      #F2CC60;   /* annotations */
+      --code-cm:       #8B949E;   /* comments */
+
+      /* ── Shadows & radius ── */
+      --shadow-sm:     0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md:     0 4px 12px rgba(0,0,0,0.09), 0 2px 4px rgba(0,0,0,0.05);
+      --radius:        10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 15px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      padding: 2.5rem 1rem 5rem;
+    }
+
+    /* ── White card that holds all content ── */
+    .container {
+      max-width: 740px;
+      margin: 0 auto;
+      background: var(--surface);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      padding: 2.5rem 2.75rem 3rem;
+    }
+
+    /* ════════════════════════════════════════
+       HEADER
+    ════════════════════════════════════════ */
+    .header {
+      margin-bottom: 2.5rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::after {
+      content: '';
+      position: absolute;
+      top: -10px; right: -10px;
+      width: 200px; height: 140px;
+      background-image: radial-gradient(circle, rgba(16,185,129,.15) 1px, transparent 1px);
+      background-size: 18px 18px;
+      pointer-events: none;
+      mask-image: radial-gradient(ellipse 100% 100% at 100% 0%, black 0%, transparent 70%);
+    }
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+      font-weight: 500;
+      position: relative; z-index: 1;
+    }
+    .breadcrumb span { color: var(--text-dim); }
+    .breadcrumb .crumb-active { color: var(--accent-mid); }
+
+    .title-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 0.6rem;
+      position: relative; z-index: 1;
+    }
+
+    .doc-icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      background: var(--accent-pale);
+      border: 1px solid var(--accent-dim);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+
+    h1 {
+      font-size: 1.85rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+    }
+
+    .header-sub { font-size: 14px; color: var(--text-muted); margin-top: 0.35rem; }
+
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+      flex-wrap: wrap;
+      position: relative; z-index: 1;
+    }
+
+    .meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+    }
+    .meta-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+    /* ════════════════════════════════════════
+       CONTEXT BANNER
+    ════════════════════════════════════════ */
+    .context-banner {
+      background: var(--blue-pale);
+      border: 1px solid var(--blue-border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      display: flex;
+      gap: 0.8rem;
+      align-items: flex-start;
+      margin-bottom: 2.5rem;
+    }
+    .context-banner-icon { font-size: 1rem; flex-shrink: 0; margin-top: 2px; }
+    .context-banner-body strong { font-size: 13.5px; font-weight: 600; color: var(--blue); display: block; margin-bottom: 0.2rem; }
+    .context-banner-body p { font-size: 13px; color: var(--text-muted); line-height: 1.55; }
+
+    /* ════════════════════════════════════════
+       SECTIONS
+    ════════════════════════════════════════ */
+    section { margin-bottom: 2.25rem; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.9rem;
+    }
+    .section-num   { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; color: var(--accent-light); }
+    .section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); }
+    .section-line  { flex: 1; height: 1px; background: var(--border); }
+
+    /* ════════════════════════════════════════
+       STEP CARDS
+    ════════════════════════════════════════ */
+    .step-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .step-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .step-top { display: flex; align-items: flex-start; }
+    .step-indicator { padding: 1.15rem 0 1.15rem 1.25rem; }
+
+    .step-badge {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: var(--accent-pale);
+      border: 1.5px solid var(--accent-dim);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+      color: var(--accent-mid);
+    }
+
+    .step-body  { flex: 1; padding: 1.1rem 1.35rem 1.2rem; }
+    .step-title { font-size: 14.5px; font-weight: 600; color: var(--text); margin-bottom: 0.25rem; }
+    .step-desc  { font-size: 13px; color: var(--text-muted); margin-bottom: 0.85rem; line-height: 1.5; }
+    .step-desc:last-child { margin-bottom: 0; }
+
+    /* ════════════════════════════════════════
+       CODE BLOCKS — dark (GitHub Dark theme)
+    ════════════════════════════════════════ */
+    .code-wrap {
+      border: 1px solid var(--code-border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 0.65rem;
+      box-shadow: var(--shadow-md);
+    }
+    .code-wrap:last-child { margin-bottom: 0; }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--code-surface);
+      border-bottom: 1px solid var(--code-border);
+      padding: 0.45rem 0.9rem;
+    }
+    .code-lang { font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--code-cm); font-family: 'JetBrains Mono', monospace; }
+    .code-dots { display: flex; gap: 5px; }
+    .code-dots span { width: 9px; height: 9px; border-radius: 50%; }
+    .code-dots span:nth-child(1) { background: #FF5F56; }
+    .code-dots span:nth-child(2) { background: #FFBD2E; }
+    .code-dots span:nth-child(3) { background: #27C93F; }
+
+    .code-body { background: var(--code-bg); padding: 0.9rem 1.1rem; overflow-x: auto; }
+    .code-body code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      color: var(--code-default);
+      white-space: pre;
+      display: block;
+      line-height: 1.65;
+    }
+
+    .kw { color: var(--code-kw); }
+    .fn { color: var(--code-fn); }
+    .st { color: var(--code-str); }
+    .nm { color: var(--code-num); }
+    .cl { color: var(--code-cls); }
+    .an { color: var(--code-ann); }
+    .cm { color: var(--code-cm); font-style: italic; }
+
+    /* ════════════════════════════════════════
+       OUTPUT BLOCK
+    ════════════════════════════════════════ */
+    .output-wrap { border: 1px solid var(--green-border); border-radius: 8px; overflow: hidden; margin-top: 0.5rem; }
+
+    .output-header {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: var(--green-pale);
+      border-bottom: 1px solid var(--green-border);
+      padding: 0.4rem 0.9rem;
+    }
+    .output-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+    .output-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--green); }
+    .output-body  { background: var(--green-pale); padding: 0.75rem 1rem; }
+    .output-body code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px; color: var(--green);
+      white-space: pre; display: block;
+    }
+
+    /* ════════════════════════════════════════
+       CALLOUT BOXES
+    ════════════════════════════════════════ */
+    .callout {
+      display: flex;
+      gap: 0.7rem;
+      align-items: flex-start;
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      font-size: 13px;
+      margin-top: 0.65rem;
+      border: 1px solid;
+      line-height: 1.55;
+    }
+    .callout-icon { flex-shrink: 0; line-height: 1.55; }
+    .callout-body strong { font-weight: 600; display: block; margin-bottom: 0.1rem; }
+    .callout-body p { opacity: 0.85; margin: 0; }
+
+    .callout.info    { background: var(--blue-pale);   border-color: var(--blue-border);   color: var(--blue); }
+    .callout.success { background: var(--green-pale);  border-color: var(--green-border);  color: var(--green); }
+    .callout.warning { background: var(--amber-pale);  border-color: var(--amber-border);  color: var(--amber); }
+    .callout.danger  { background: var(--red-pale);    border-color: var(--red-border);    color: var(--red); }
+
+    /* ════════════════════════════════════════
+       INLINE CODE
+    ════════════════════════════════════════ */
+    :not(pre):not(.code-body) > code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      color: var(--accent);
+    }
+
+    /* ════════════════════════════════════════
+       INFO CARD
+    ════════════════════════════════════════ */
+    .info-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      padding: 1.25rem 1.5rem;
+    }
+
+    /* ════════════════════════════════════════
+       TABLES
+    ════════════════════════════════════════ */
+    .table-wrap { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    thead th {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 0.55rem 1rem;
+      text-align: left;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    tbody td {
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--surface2); }
+    tbody td:first-child { font-weight: 500; }
+
+    /* ════════════════════════════════════════
+       LAYER DIAGRAM
+    ════════════════════════════════════════ */
+    .layer-diagram { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .layer-row { display: flex; align-items: stretch; border-bottom: 1px solid var(--border); }
+    .layer-row:last-child { border-bottom: none; }
+    .layer-label {
+      width: 115px; flex-shrink: 0;
+      background: var(--surface2);
+      border-right: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      padding: 0.75rem 0.5rem; text-align: center;
+      font-size: 10.5px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .layer-content {
+      flex: 1; padding: 0.8rem 1.1rem;
+      font-size: 13px; color: var(--text-muted); line-height: 1.55;
+    }
+    .layer-content strong { color: var(--text); font-weight: 600; display: block; font-size: 13.5px; margin-bottom: 0.2rem; }
+
+    /* ════════════════════════════════════════
+       ENDPOINT CARDS
+    ════════════════════════════════════════ */
+    .endpoint-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+    .endpoint-card:last-child { margin-bottom: 0; }
+
+    .endpoint-head {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.75rem 1.25rem;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+    .method-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px; font-weight: 700;
+      padding: 3px 8px; border-radius: 5px;
+      letter-spacing: 0.05em; flex-shrink: 0;
+    }
+    .method-badge.post { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+    .method-badge.get  { background: #DBEAFE; color: #1E40AF; border: 1px solid #BFDBFE; }
+    .method-badge.put  { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+    .method-badge.delete { background: #FEF2F2; color: #B91C1C; border: 1px solid #FCA5A5; }
+
+    .endpoint-path { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: var(--text); }
+    .endpoint-note { margin-left: auto; font-size: 11.5px; color: var(--text-dim); }
+    .endpoint-body { padding: 1rem 1.25rem; }
+    .endpoint-body .endpoint-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.5; }
+
+    /* ════════════════════════════════════════
+       RULE CARDS
+    ════════════════════════════════════════ */
+    .rule-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent-mid);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+    .rule-card:last-child { margin-bottom: 0; }
+    .rule-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-mid); margin-bottom: 0.3rem; }
+    .rule-card h4 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; }
+    .rule-card p  { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+    /* ════════════════════════════════════════
+       DIVIDER & FOOTER
+    ════════════════════════════════════════ */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+    .footer-note {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--accent-mid);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.35rem;
+      display: flex;
+      gap: 0.85rem;
+      align-items: flex-start;
+      box-shadow: var(--shadow-sm);
+    }
+    .footer-note-icon { font-size: 1rem; flex-shrink: 0; margin-top: 2px; }
+    .footer-note-body strong { font-size: 14px; font-weight: 600; color: var(--text); display: block; margin-bottom: 0.2rem; }
+    .footer-note-body p { font-size: 13px; color: var(--text-muted); line-height: 1.55; }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 1.55rem; }
+      .container { padding: 1.5rem 1.25rem 2rem; }
+      .meta-row { gap: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ════════════════════════════════════════ HEADER ════════════════════════════════════════ -->
+  <div class="header">
+    <div class="breadcrumb">
+      Student Life <span>›</span> Backend Handoff <span>›</span>
+      <span class="crumb-active">Schedules API Requirements</span>
+    </div>
+    <div class="title-row">
+      <div class="doc-icon">📅</div>
+      <div>
+        <h1>Schedules — Backend Requirements</h1>
+        <div class="header-sub">Everything the backend must expose to power the calendar page (<code>SchedulesView.vue</code>) and event reminders with real data</div>
+      </div>
+    </div>
+    <div class="meta-row">
+      <div class="meta-pill"><span class="dot"></span> Up to date</div>
+      <div class="meta-pill">Updated July 3, 2026</div>
+      <div class="meta-pill">Vue 3 + TypeScript frontend</div>
+      <div class="meta-pill">~9 min read</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════ CONTEXT BANNER ════════════════════════════════════════ -->
+  <div class="context-banner">
+    <div class="context-banner-icon">ℹ️</div>
+    <div class="context-banner-body">
+      <strong>Why this document exists</strong>
+      <p>The schedules feature (<code>src/features/schedules/</code>) is fully functional today, but entirely client-side: the Pinia store seeds 10 demo events, persists everything in localStorage, and generates ids locally. An empty <code>api/</code> folder is already scaffolded for the swap. This spec defines the CRUD endpoints, validation, and notification-scheduling responsibilities the backend must take over.</p>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════ SECTION 01 — Page anatomy ════════════════════════════════════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <span class="section-title">What the schedules page does</span>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="layer-diagram">
+      <div class="layer-row">
+        <div class="layer-label">Calendar</div>
+        <div class="layer-content"><strong>TimeGrid.vue / MonthGrid.vue — month, week &amp; day views</strong>Renders the student's events on a Google Calendar-style grid. View switching and date navigation are pure UI state — the backend only needs to serve the events for the visible date range.</div>
+      </div>
+      <div class="layer-row">
+        <div class="layer-label">Sidebar</div>
+        <div class="layer-content"><strong>ScheduleSidebar.vue — mini calendar, next event, week breakdown</strong>Shows the next upcoming event and total minutes booked per category this week. Both are computed client-side in the store (<code>upcoming</code>, <code>weekBreakdown</code>) from the loaded events — no dedicated endpoints needed.</div>
+      </div>
+      <div class="layer-row">
+        <div class="layer-label">Event form</div>
+        <div class="layer-content"><strong>EventFormModal.vue — create / edit / delete</strong>One modal for the full lifecycle: title, category, date, start–end time, location, notes, important flag, and an optional single reminder (value + minutes/hours/days unit, stored as total minutes). Deleting asks for confirmation first.</div>
+      </div>
+      <div class="layer-row">
+        <div class="layer-label">Reminders</div>
+        <div class="layer-content"><strong>useEventReminders.ts — frontend-only reminder engine</strong>Polls every 30 seconds while the app is open and fires a toast + notification-center entry when an event enters its window (start − reminderMinutes). Fired reminders are deduped in localStorage. This only works while the tab is open — real scheduling belongs on the backend.</div>
+      </div>
+      <div class="layer-row">
+        <div class="layer-label">Briefing</div>
+        <div class="layer-content"><strong>SchedulesView.vue — on-load agenda toasts</strong>On page load the view announces what's happening now, what's next today, important items, and the next future event. All derived client-side from the loaded events.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════ SECTION 02 — Data contract ════════════════════════════════════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <span class="section-title">Data contract the frontend already expects</span>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="step-list">
+
+      <div class="step-card">
+        <div class="step-top">
+          <div class="step-indicator"><div class="step-badge">1</div></div>
+          <div class="step-body">
+            <div class="step-title">Event shape — <code>ScheduleEvent</code></div>
+            <div class="step-desc">Defined in <code>src/features/schedules/types</code>. Every field below is already wired through the store, the calendar grids, and the form modal — JSON responses should match it exactly.</div>
+            <div class="code-wrap">
+              <div class="code-header">
+                <span class="code-lang">TypeScript</span>
+                <div class="code-dots"><span></span><span></span><span></span></div>
+              </div>
+              <div class="code-body"><code><span class="kw">export interface</span> <span class="cl">ScheduleEvent</span> {
+  id: <span class="cl">number</span>
+  title: <span class="cl">string</span>
+  category: <span class="st">'class'</span> | <span class="st">'study'</span> | <span class="st">'meeting'</span> | <span class="st">'exam'</span> | <span class="st">'personal'</span>
+  date: <span class="cl">string</span>       <span class="cm">// ISO date, yyyy-mm-dd (single day)</span>
+  start: <span class="cl">string</span>      <span class="cm">// 24h 'HH:MM' wall-clock</span>
+  end: <span class="cl">string</span>        <span class="cm">// 24h 'HH:MM', must be after start</span>
+  location: <span class="cl">string</span>   <span class="cm">// optional, '' when empty</span>
+  notes: <span class="cl">string</span>      <span class="cm">// optional, '' when empty</span>
+  important: <span class="cl">boolean</span>
+  reminderMinutes: <span class="cl">number</span> | <span class="kw">null</span>  <span class="cm">// notify N min before start; null = off</span>
+}</code></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-top">
+          <div class="step-indicator"><div class="step-badge">2</div></div>
+          <div class="step-body">
+            <div class="step-title">Create/update payload — <code>ScheduleEventDraft</code></div>
+            <div class="step-desc">The form modal submits every field except <code>id</code> (<code>Omit&lt;ScheduleEvent, 'id'&gt;</code>). The same payload is used for both create and full update, so PUT semantics fit better than PATCH for edits.</div>
+            <div class="code-wrap">
+              <div class="code-header">
+                <span class="code-lang">TypeScript</span>
+                <div class="code-dots"><span></span><span></span><span></span></div>
+              </div>
+              <div class="code-body"><code><span class="kw">export type</span> <span class="cl">ScheduleEventDraft</span> = <span class="cl">Omit</span>&lt;<span class="cl">ScheduleEvent</span>, <span class="st">'id'</span>&gt;</code></div>
+            </div>
+            <div class="callout info">
+              <div class="callout-icon">ℹ️</div>
+              <div class="callout-body">
+                <strong>Reminder is a single value in minutes</strong>
+                <p>The form's "10 minutes / 2 hours / 1 day before" picker collapses to one integer (<code>10</code>, <code>120</code>, <code>1440</code>) before submit. The backend only ever sees <code>reminderMinutes</code> — never a value/unit pair. One reminder per event, matching Google Calendar's default row.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════ SECTION 03 — API endpoints ════════════════════════════════════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <span class="section-title">Endpoints to build</span>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="endpoint-card">
+      <div class="endpoint-head">
+        <span class="method-badge get">GET</span>
+        <span class="endpoint-path">/api/v1/schedules?from=2026-06-29&amp;to=2026-08-09</span>
+        <span class="endpoint-note">Auth required (JWT)</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Events for a date range (inclusive), sorted by <code>date</code> then <code>start</code>. The frontend requests the visible month/week/day range on navigation instead of loading the student's entire history. The month view renders up to 6 weeks, so ranges can span two months.</p>
+        <div class="output-wrap" style="margin-top:0">
+          <div class="output-header"><div class="output-dot"></div><span class="output-label">Response 200</span></div>
+          <div class="output-body"><code>[
+  {
+    "id": 5, "title": "Database midterm", "category": "exam",
+    "date": "2026-07-01", "start": "09:30", "end": "11:00",
+    "location": "Hall A", "notes": "",
+    "important": true, "reminderMinutes": 30
+  }
+]</code></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="endpoint-card">
+      <div class="endpoint-head">
+        <span class="method-badge post">POST</span>
+        <span class="endpoint-path">/api/v1/schedules</span>
+        <span class="endpoint-note">Auth required</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Creates an event from a <code>ScheduleEventDraft</code>. The store currently invents ids with max+1 — the server must own id generation and return the full created event.</p>
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang">Request</span><div class="code-dots"><span></span><span></span><span></span></div></div>
+          <div class="code-body"><code>{
+  <span class="st">"title"</span>: <span class="st">"Thesis advisor meeting"</span>,
+  <span class="st">"category"</span>: <span class="st">"meeting"</span>,
+  <span class="st">"date"</span>: <span class="st">"2026-07-06"</span>,
+  <span class="st">"start"</span>: <span class="st">"14:00"</span>, <span class="st">"end"</span>: <span class="st">"14:45"</span>,
+  <span class="st">"location"</span>: <span class="st">""</span>, <span class="st">"notes"</span>: <span class="st">""</span>,
+  <span class="st">"important"</span>: <span class="kw">true</span>,
+  <span class="st">"reminderMinutes"</span>: <span class="nm">15</span>
+}</code></div>
+        </div>
+        <div class="output-wrap">
+          <div class="output-header"><div class="output-dot"></div><span class="output-label">Response 201</span></div>
+          <div class="output-body"><code>{ "id": 27, "title": "Thesis advisor meeting", ... }</code></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="endpoint-card">
+      <div class="endpoint-head">
+        <span class="method-badge put">PUT</span>
+        <span class="endpoint-path">/api/v1/schedules/{id}</span>
+        <span class="endpoint-note">Auth required</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Full replace with a <code>ScheduleEventDraft</code> — the edit modal always submits every field. Returns the updated event. Changing <code>date</code>, <code>start</code>, or <code>reminderMinutes</code> must re-arm any pending reminder (see Rule 5).</p>
+      </div>
+    </div>
+
+    <div class="endpoint-card">
+      <div class="endpoint-head">
+        <span class="method-badge put">PATCH</span>
+        <span class="endpoint-path">/api/v1/schedules/{id}/importance</span>
+        <span class="endpoint-note">Auth required</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Backs the one-click importance toggle (<code>toggleImportant</code> in the store), used from the sidebar and event block without opening the full form.</p>
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang">Request</span><div class="code-dots"><span></span><span></span><span></span></div></div>
+          <div class="code-body"><code>{ <span class="st">"important"</span>: <span class="kw">true</span> }</code></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="endpoint-card">
+      <div class="endpoint-head">
+        <span class="method-badge delete">DELETE</span>
+        <span class="endpoint-path">/api/v1/schedules/{id}</span>
+        <span class="endpoint-note">Auth required</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Permanent delete (the frontend already confirms with the user first). Return 204 on success, 404 if the event doesn't exist or belongs to another student. Any pending reminder for the event must be cancelled.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════ SECTION 04 — Business rules ════════════════════════════════════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <span class="section-title">Business rules the backend must own</span>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="rule-card">
+      <div class="rule-label">Rule 1</div>
+      <h4>Re-validate everything the form validates</h4>
+      <p>The modal enforces: non-empty <code>title</code>, <code>end</code> strictly after <code>start</code> (string comparison on <code>HH:MM</code> works because events are single-day), <code>category</code> one of the five enum values, and <code>reminderMinutes</code> either <code>null</code> or an integer ≥ 0. The backend must reject anything that violates these with a 400 — client validation is UX, not security.</p>
+    </div>
+
+    <div class="rule-card">
+      <div class="rule-label">Rule 2</div>
+      <h4>Events are single-day, no recurrence — yet</h4>
+      <p>The data model has one <code>date</code> per event and no repeat fields; a weekly lecture is currently stored as separate events. If the backend adds recurrence later, expose it as expanded per-day instances within the requested range so the existing frontend contract keeps working, and coordinate before adding an <code>rrule</code>-style field.</p>
+    </div>
+
+    <div class="rule-card">
+      <div class="rule-label">Rule 3</div>
+      <h4>Times are wall-clock strings — store them as-is</h4>
+      <p><code>date</code> + <code>start</code>/<code>end</code> represent what's on the student's timetable ("class at 08:00"), not instants. Persist them verbatim (DATE + TIME columns, or strings) and never convert through UTC — a timezone round-trip would shift a 08:00 lecture to a different hour. Timezone only matters when the server computes reminder firing times (Rule 5).</p>
+    </div>
+
+    <div class="rule-card">
+      <div class="rule-label">Rule 4</div>
+      <h4>Everything is scoped to the authenticated student</h4>
+      <p>All endpoints derive the owner from the auth token; ids from other students return 404, not 403, to avoid leaking that an event exists. No <code>userId</code> parameters anywhere.</p>
+      <div class="code-wrap" style="margin-top:0.6rem">
+        <div class="code-header"><span class="code-lang">Java</span><div class="code-dots"><span></span><span></span><span></span></div></div>
+        <div class="code-body"><code><span class="cm">// ✓ correct — ownership enforced in the query itself</span>
+<span class="kw">return</span> repo.<span class="fn">findByIdAndStudentId</span>(id, user.<span class="fn">getId</span>())
+        .<span class="fn">orElseThrow</span>(<span class="cl">NotFoundException</span>::<span class="kw">new</span>);
+
+<span class="cm">// ✗ wrong — fetch first, check later (or never)</span>
+<span class="cl">ScheduleEvent</span> e = repo.<span class="fn">findById</span>(id).<span class="fn">orElseThrow</span>();</code></div>
+      </div>
+    </div>
+
+    <div class="rule-card">
+      <div class="rule-label">Rule 5</div>
+      <h4>Take over reminder scheduling from the frontend</h4>
+      <p>Today <code>useEventReminders.ts</code> polls every 30 s while the tab is open and dedupes fired reminders in localStorage under the key <code>eventId|date|start|reminderMinutes</code> — meaning a reminder re-arms whenever the time or offset changes. The backend should replicate exactly that: schedule a notification at <code>start − reminderMinutes</code> in the student's timezone, fire it at most once per (event, date, start, offset) tuple, cancel it on delete, and re-schedule it on edit. Delivery lands in the existing notification center (and later push/email). The frontend engine stays as an in-app fallback until this exists.</p>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════ SECTION 05 — Prototype behavior to replace ════════════════════════════════════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <span class="section-title">Current prototype behavior → real source</span>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="info-card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Prototype today</th><th>Where in code</th><th>Replaced by</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>10 seeded demo events around the current week</td><td><code>useScheduleStore.ts</code> — <code>seed()</code></td><td><code>GET /schedules?from&amp;to</code></td></tr>
+            <tr><td>Events persisted in localStorage</td><td><code>useScheduleStore.ts</code> — persist config</td><td>Server database as source of truth</td></tr>
+            <tr><td>Client-generated ids (max + 1)</td><td><code>useScheduleStore.ts</code> — <code>nextId()</code></td><td>Server-generated id in POST response</td></tr>
+            <tr><td>Local create / update / remove mutations</td><td><code>useScheduleStore.ts</code> — CRUD actions</td><td><code>POST</code> / <code>PUT</code> / <code>DELETE /schedules</code></td></tr>
+            <tr><td>Local importance flip</td><td><code>useScheduleStore.ts</code> — <code>toggleImportant()</code></td><td><code>PATCH /schedules/{id}/importance</code></td></tr>
+            <tr><td>30-second polling reminder engine, localStorage dedup</td><td><code>useEventReminders.ts</code></td><td>Backend-scheduled notifications (Rule 5)</td></tr>
+            <tr><td>Next-event + week category breakdown</td><td><code>useScheduleStore.ts</code> — <code>upcoming</code>, <code>weekBreakdown</code></td><td>Stays client-side — computed from the fetched range</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout success">
+        <div class="callout-icon">✅</div>
+        <div class="callout-body">
+          <strong>The API slot is already scaffolded</strong>
+          <p><code>src/features/schedules/api/</code> exists (empty, held by a <code>.gitkeep</code>). Once these endpoints are live, the frontend adds the client there and the store swaps its local mutations for API calls — no component changes needed.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ════════════════════════════════════════ FOOTER NOTE ════════════════════════════════════════ -->
+  <div class="footer-note">
+    <div class="footer-note-icon">💡</div>
+    <div class="footer-note-body">
+      <strong>Serve by range, keep derived data on the client</strong>
+      <p>One range query (<code>from</code>/<code>to</code>) covers every calendar view, the sidebar, the on-load briefing, and the dashboard's schedule card — sorting and per-week breakdowns are already computed client-side. Field names match the frontend's TypeScript types exactly (<code>camelCase</code>), so keep the JSON casing as shown. The one genuinely new backend capability this feature needs is server-side reminder scheduling.</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
