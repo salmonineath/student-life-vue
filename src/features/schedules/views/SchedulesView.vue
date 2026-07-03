@@ -6,7 +6,6 @@ import ScheduleToolbar from '@/features/schedules/components/ScheduleToolbar.vue
 import TimeGrid from '@/features/schedules/components/TimeGrid.vue'
 import MonthGrid from '@/features/schedules/components/MonthGrid.vue'
 import EventFormModal from '@/features/schedules/components/EventFormModal.vue'
-import ToastStack from '@/shared/components/ToastStack.vue'
 
 import { useScheduleStore } from '@/features/schedules/store/useScheduleStore'
 import { useToasts } from '@/shared/composables/useToasts'
@@ -150,5 +149,4 @@ onMounted(() => {
     @remove="onRemove"
   />
 
-  <ToastStack />
 </template>

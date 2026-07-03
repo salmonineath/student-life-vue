@@ -5,6 +5,8 @@ import {
   Check,
   CheckCheck,
   Clock,
+  Mail,
+  Paperclip,
   PartyPopper,
   Sparkles,
   Star,
@@ -27,6 +29,8 @@ const ICONS: Record<ToastIcon, LucideIcon> = {
   clock: Clock,
   calendar: Calendar,
   star: Star,
+  paperclip: Paperclip,
+  mail: Mail,
 }
 
 const COLORS: Record<ToastColor, string> = {

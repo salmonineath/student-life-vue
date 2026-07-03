@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Backend Requirements</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* ── Page & surface ── */
+      --bg:            #F7F6F3;   /* warm off-white page background */
+      --surface:       #FFFFFF;
+      --surface2:      #F5F4F1;   /* thead / info-card bg */
+      --border:        #E8E6E1;
+      --border-strong: #D4D0C8;
+
+      /* ── Accent (change this to match your doc's topic) ── */
+      --accent:        #047857;   /* dark emerald */
+      --accent-mid:    #059669;   /* emerald */
+      --accent-light:  #10B981;   /* light emerald */
+      --accent-pale:   #ECFDF5;   /* very pale emerald */
+      --accent-dim:    #A7F3D0;   /* emerald border */
+
+      /* ── Semantic colors ── */
+      --green:         #15803D;
+      --green-pale:    #F0FDF4;
+      --green-border:  #86EFAC;
+      --amber:         #92400E;
+      --amber-pale:    #FFFBEB;
+      --amber-border:  #FCD34D;
+      --red:           #B91C1C;
+      --red-pale:      #FEF2F2;
+      --red-border:    #FCA5A5;
+      --blue:          #1D4ED8;
+      --blue-pale:     #EFF6FF;
+      --blue-border:   #93C5FD;
+
+      /* ── Text ── */
+      --text:          #18181B;
+      --text-muted:    #6B6B71;
+      --text-dim:      #A1A1AA;
+
+      /* ── Code — GitHub Dark ── */
+      --code-bg:       #0D1117;
+      --code-surface:  #161B22;
+      --code-border:   #30363D;
+      --code-default:  #C9D1D9;
+      --code-kw:       #FF7B72;   /* keywords */
+      --code-fn:       #D2A8FF;   /* functions */
+      --code-str:      #A5D6FF;   /* strings */
+      --code-num:      #79C0FF;   /* numbers */
+      --code-cls:      #FFA657;   /* classes */
+      --code-ann:      #F2CC60;   /* annotations */
+      --code-cm:       #8B949E;   /* comments */
+
+      /* ── Shadows & radius ── */
+      --shadow-sm:     0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md:     0 4px 12px rgba(0,0,0,0.09), 0 2px 4px rgba(0,0,0,0.05);
+      --radius:        10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 15px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      padding: 2.5rem 1rem 5rem;
+    }
+
+    /* ── White card that holds all content ── */
+    .container {
+      max-width: 740px;
+      margin: 0 auto;
+      background: var(--surface);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      padding: 2.5rem 2.75rem 3rem;
+    }
+
+    /* ════════════════════════════════════════
+       HEADER
+    ════════════════════════════════════════ */
+    .header {
+      margin-bottom: 2.5rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::after {
+      content: '';
+      position: absolute;
+      top: -10px; right: -10px;
+      width: 200px; height: 140px;
+      background-image: radial-gradient(circle, rgba(16,185,129,.15) 1px, transparent 1px);
+      background-size: 18px 18px;
+      pointer-events: none;
+      mask-image: radial-gradient(ellipse 100% 100% at 100% 0%, black 0%, transparent 70%);
+    }
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+      font-weight: 500;
+      position: relative; z-index: 1;
+    }
+    .breadcrumb span { color: var(--text-dim); }
+    .breadcrumb .crumb-active { color: var(--accent-mid); }
+
+    .title-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 0.6rem;
+      position: relative; z-index: 1;
+    }
+
+    .doc-icon {
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      background: var(--accent-pale);
+      border: 1px solid var(--accent-dim);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+
+    h1 {
+      font-size: 1.85rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+    }
+
+    .header-sub { font-size: 14px; color: var(--text-muted); margin-top: 0.35rem; }
+
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+      flex-wrap: wrap;
+      position: relative; z-index: 1;
+    }
+
+    .meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 10px;
+    }
+    .meta-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+    /* ════════════════════════════════════════
+       CONTEXT BANNER
+    ════════════════════════════════════════ */
+    .context-banner {
+      background: var(--blue-pale);
+      border: 1px solid var(--blue-border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      display: flex;
+      gap: 0.8rem;
+      align-items: flex-start;
+      margin-bottom: 2.5rem;
+    }
+    .context-banner-icon { font-size: 1rem; flex-shrink: 0; margin-top: 2px; }
+    .context-banner-body strong { font-size: 13.5px; font-weight: 600; color: var(--blue); display: block; margin-bottom: 0.2rem; }
+    .context-banner-body p { font-size: 13px; color: var(--text-muted); line-height: 1.55; }
+
+    /* ════════════════════════════════════════
+       SECTIONS
+    ════════════════════════════════════════ */
+    section { margin-bottom: 2.25rem; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.9rem;
+    }
+    .section-num   { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; color: var(--accent-light); }
+    .section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); }
+    .section-line  { flex: 1; height: 1px; background: var(--border); }
+
+    /* ════════════════════════════════════════
+       STEP CARDS
+    ════════════════════════════════════════ */
+    .step-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .step-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .step-top { display: flex; align-items: flex-start; }
+    .step-indicator { padding: 1.15rem 0 1.15rem 1.25rem; }
+
+    .step-badge {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: var(--accent-pale);
+      border: 1.5px solid var(--accent-dim);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+      color: var(--accent-mid);
+    }
+
+    .step-body  { flex: 1; padding: 1.1rem 1.35rem 1.2rem; }
+    .step-title { font-size: 14.5px; font-weight: 600; color: var(--text); margin-bottom: 0.25rem; }
+    .step-desc  { font-size: 13px; color: var(--text-muted); margin-bottom: 0.85rem; line-height: 1.5; }
+    .step-desc:last-child { margin-bottom: 0; }
+
+    /* ════════════════════════════════════════
+       CODE BLOCKS — dark (GitHub Dark theme)
+    ════════════════════════════════════════ */
+    .code-wrap {
+      border: 1px solid var(--code-border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 0.65rem;
+      box-shadow: var(--shadow-md);
+    }
+    .code-wrap:last-child { margin-bottom: 0; }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--code-surface);
+      border-bottom: 1px solid var(--code-border);
+      padding: 0.45rem 0.9rem;
+    }
+    .code-lang { font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--code-cm); font-family: 'JetBrains Mono', monospace; }
+    .code-dots { display: flex; gap: 5px; }
+    .code-dots span { width: 9px; height: 9px; border-radius: 50%; }
+    .code-dots span:nth-child(1) { background: #FF5F56; }
+    .code-dots span:nth-child(2) { background: #FFBD2E; }
+    .code-dots span:nth-child(3) { background: #27C93F; }
+
+    .code-body { background: var(--code-bg); padding: 0.9rem 1.1rem; overflow-x: auto; }
+    .code-body code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      color: var(--code-default);
+      white-space: pre;
+      display: block;
+      line-height: 1.65;
+    }
+
+    .kw { color: var(--code-kw); }
+    .fn { color: var(--code-fn); }
+    .st { color: var(--code-str); }
+    .nm { color: var(--code-num); }
+    .cl { color: var(--code-cls); }
+    .an { color: var(--code-ann); }
+    .cm { color: var(--code-cm); font-style: italic; }
+
+    /* ════════════════════════════════════════
+       OUTPUT BLOCK
+    ════════════════════════════════════════ */
+    .output-wrap { border: 1px solid var(--green-border); border-radius: 8px; overflow: hidden; margin-top: 0.5rem; }
+
+    .output-header {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: var(--green-pale);
+      border-bottom: 1px solid var(--green-border);
+      padding: 0.4rem 0.9rem;
+    }
+    .output-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+    .output-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--green); }
+    .output-body  { background: var(--green-pale); padding: 0.75rem 1rem; }
+    .output-body code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px; color: var(--green);
+      white-space: pre; display: block;
+    }
+
+    /* ════════════════════════════════════════
+       CALLOUT BOXES
+    ════════════════════════════════════════ */
+    .callout {
+      display: flex;
+      gap: 0.7rem;
+      align-items: flex-start;
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      font-size: 13px;
+      margin-top: 0.65rem;
+      border: 1px solid;
+      line-height: 1.55;
+    }
+    .callout-icon { flex-shrink: 0; line-height: 1.55; }
+    .callout-body strong { font-weight: 600; display: block; margin-bottom: 0.1rem; }
+    .callout-body p { opacity: 0.85; margin: 0; }
+
+    .callout.info    { background: var(--blue-pale);   border-color: var(--blue-border);   color: var(--blue); }
+    .callout.success { background: var(--green-pale);  border-color: var(--green-border);  color: var(--green); }
+    .callout.warning { background: var(--amber-pale);  border-color: var(--amber-border);  color: var(--amber); }
+    .callout.danger  { background: var(--red-pale);    border-color: var(--red-border);    color: var(--red); }
+
+    /* ════════════════════════════════════════
+       INLINE CODE
+    ════════════════════════════════════════ */
+    :not(pre):not(.code-body) > code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      color: var(--accent);
+    }
+
+    /* ════════════════════════════════════════
+       INFO CARD
+    ════════════════════════════════════════ */
+    .info-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      padding: 1.25rem 1.5rem;
+    }
+
+    /* ════════════════════════════════════════
+       TABLES
+    ════════════════════════════════════════ */
+    .table-wrap { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    thead th {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 0.55rem 1rem;
+      text-align: left;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    tbody td {
+      padding: 0.6rem 1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text); vertical-align: top; line-height: 1.5;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--surface2); }
+    tbody td:first-child { font-weight: 500; }
+
+    /* ════════════════════════════════════════
+       LAYER DIAGRAM
+    ════════════════════════════════════════ */
+    .layer-diagram { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .layer-row { display: flex; align-items: stretch; border-bottom: 1px solid var(--border); }
+    .layer-row:last-child { border-bottom: none; }
+    .layer-label {
+      width: 115px; flex-shrink: 0;
+      background: var(--surface2);
+      border-right: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      padding: 0.75rem 0.5rem; text-align: center;
+      font-size: 10.5px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .layer-content {
+      flex: 1; padding: 0.8rem 1.1rem;
+      font-size: 13px; color: var(--text-muted); line-height: 1.55;
+    }
+    .layer-content strong { color: var(--text); font-weight: 600; display: block; font-size: 13.5px; margin-bottom: 0.2rem; }
+
+    /* ════════════════════════════════════════
+       ENDPOINT CARDS
+    ════════════════════════════════════════ */
+    .endpoint-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+    .endpoint-card:last-child { margin-bottom: 0; }
+
+    .endpoint-head {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.75rem 1.25rem;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+    .method-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px; font-weight: 700;
+      padding: 3px 8px; border-radius: 5px;
+      letter-spacing: 0.05em; flex-shrink: 0;
+    }
+    .method-badge.post { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+    .method-badge.get  { background: #DBEAFE; color: #1E40AF; border: 1px solid #BFDBFE; }
+    .method-badge.put  { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+    .method-badge.delete { background: #FEF2F2; color: #B91C1C; border: 1px solid #FCA5A5; }
+
+    .endpoint-path { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: var(--text); }
+    .endpoint-note { margin-left: auto; font-size: 11.5px; color: var(--text-dim); }
+    .endpoint-body { padding: 1rem 1.25rem; }
+    .endpoint-body .endpoint-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.5; }
+
+    /* ════════════════════════════════════════
+       RULE CARDS
+    ════════════════════════════════════════ */
+    .rule-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent-mid);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      padding: 1rem 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+    .rule-card:last-child { margin-bottom: 0; }
+    .rule-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-mid); margin-bottom: 0.3rem; }
+    .rule-card h4 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; }
+    .rule-card p  { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+    /* ════════════════════════════════════════
+       DIVIDER & FOOTER
+    ════════════════════════════════════════ */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+    .footer-note {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--accent-mid);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.35rem;
+      display: flex;
+      gap: 0.85rem;
+      align-items: flex-start;
+      box-shadow: var(--shadow-sm);
+    }
+    .footer-note-icon { font-size: 1rem; flex-shrink: 0; margin-top: 2px; }
+    .footer-note-body strong { font-size: 14px; font-weight: 600; color: var(--text); display: block; margin-bottom: 0.2rem; }
+    .footer-note-body p { font-size: 13px; color: var(--text-muted); line-height: 1.55; }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 1.55rem; }
+      .container { padding: 1.5rem 1.25rem 2rem; }
+      .meta-row { gap: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ════════════════════════════════════════ HEADER ════════════════════════════════════════ -->
+  <div class="header">
+    <div class="breadcrumb">
+      Student Life <span>›</span> Backend Handoff <span>›</span>
+      <span class="crumb-active">Dashboard API Requirements</span>
+    </div>
+    <div class="title-row">
+      <div class="doc-icon">📊</div>
+      <div>
+        <h1>Dashboard — Backend Requirements</h1>
+        <div class="header-sub">Everything the backend must expose to power the dashboard page (<code>DashboardView.vue</code>) with real data</div>
+      </div>
+    </div>
+    <div class="meta-row">
+      <div class="meta-pill"><span class="dot"></span> Up to date</div>
+      <div class="meta-pill">Updated July 3, 2026</div>
+      <div class="meta-pill">Vue 3 + TypeScript frontend</div>
+      <div class="meta-pill">~8 min read</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════ CONTEXT BANNER ════════════════════════════════════════ -->
+  <div class="context-banner">
+    <div class="context-banner-icon">ℹ️</div>
+    <div class="context-banner-body">
+      <strong>Why this document exists</strong>
+      <p>The dashboard is currently a working prototype: every number and card is hardcoded in the frontend (<code>src/features/dashboard/</code>), and the project has no HTTP client or env config yet. This spec tells the backend team exactly which endpoints, payload shapes, and business rules to build so the frontend can swap static values for live data.</p>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════ SECTION 01 — Page anatomy ════════════════════════════════════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <span class="section-title">What the dashboard page shows</span>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="layer-diagram">
+      <div class="layer-row">
+        <div class="layer-label">Hero</div>
+        <div class="layer-content"><strong>HeroSection.vue — greeting + stat pills</strong>Needs the current date, the student's display name (greeting is hardcoded to "Student" and "Friday, June 12" today), and three counters: classes today, deadlines due this week, and overall completion %.</div>
+      </div>
+      <div class="layer-row">
+        <div class="layer-label">Schedule</div>
+        <div class="layer-content"><strong>ScheduleCard.vue — today's classes</strong>Shows the class happening right now ("Live now" with a time range and a progress bar through the session) plus the next upcoming slot — or an empty state when nothing is left today.</div>
+      </div>
+      <div class="layer-row">
+        <div class="layer-label">Deadlines</div>
+        <div class="layer-content"><strong>DeadlinesCard.vue — nearest deadlines</strong>Lists assignments due soon: title, subject tag (e.g. "IT"), and a human-readable due label ("Due in 6 days") with a "Due soon" urgency badge.</div>
+      </div>
+      <div class="layer-row">
+        <div class="layer-label">Assignments</div>
+        <div class="layer-content"><strong>AssignmentsCard.vue — counters + quick task</strong>Shows three counters (Upcoming / Overdue / Done) and an interactive assignment row the student can tick complete directly from the dashboard.</div>
+      </div>
+      <div class="layer-row">
+        <div class="layer-label">Progress</div>
+        <div class="layer-content"><strong>ProgressCard.vue — completion donut</strong>A ring showing overall completion % plus a legend with On track / Behind / Done counts.</div>
+      </div>
+      <div class="layer-row">
+        <div class="layer-label">Groups</div>
+        <div class="layer-content"><strong>GroupActivityCard.vue — study group feed</strong>Shows how many groups the student belongs to and recent activity (currently only an empty "groups are quiet" state exists).</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════ SECTION 02 — Data contracts ════════════════════════════════════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <span class="section-title">Data contracts the frontend already expects</span>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="step-list">
+
+      <div class="step-card">
+        <div class="step-top">
+          <div class="step-indicator"><div class="step-badge">1</div></div>
+          <div class="step-body">
+            <div class="step-title">Dashboard counters — <code>ProgressCounts</code></div>
+            <div class="step-desc">Defined in <code>useDashboardProgress.ts</code>. These five numbers drive the hero pills, the assignments card, and the progress donut. The backend should compute them server-side for the authenticated student.</div>
+            <div class="code-wrap">
+              <div class="code-header">
+                <span class="code-lang">TypeScript</span>
+                <div class="code-dots"><span></span><span></span><span></span></div>
+              </div>
+              <div class="code-body"><code><span class="kw">export interface</span> <span class="cl">ProgressCounts</span> {
+  upcoming: <span class="cl">number</span>   <span class="cm">// not yet due, not completed</span>
+  overdue:  <span class="cl">number</span>   <span class="cm">// past deadline, not completed</span>
+  done:     <span class="cl">number</span>   <span class="cm">// completed assignments</span>
+  onTrack:  <span class="cl">number</span>   <span class="cm">// in progress, pace &gt;= expected</span>
+  behind:   <span class="cl">number</span>   <span class="cm">// in progress, pace &lt; expected</span>
+}</code></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-top">
+          <div class="step-indicator"><div class="step-badge">2</div></div>
+          <div class="step-body">
+            <div class="step-title">Assignment shape — <code>Assignment</code></div>
+            <div class="step-desc">The full assignments feature (<code>src/features/assignments/types</code>) already models this. The dashboard reuses a slimmed view of it, so deadline endpoints should return these fields — the frontend derives display labels like "Due in 6 days" itself.</div>
+            <div class="code-wrap">
+              <div class="code-header">
+                <span class="code-lang">TypeScript</span>
+                <div class="code-dots"><span></span><span></span><span></span></div>
+              </div>
+              <div class="code-body"><code><span class="kw">export interface</span> <span class="cl">Assignment</span> {
+  id: <span class="cl">number</span>
+  title: <span class="cl">string</span>
+  subject: <span class="cl">string</span>      <span class="cm">// short tag, e.g. "IT"</span>
+  desc: <span class="cl">string</span>
+  deadline: <span class="cl">string</span>     <span class="cm">// ISO date, yyyy-mm-dd</span>
+  progress: <span class="cl">number</span>     <span class="cm">// 0–100, derived from tasks</span>
+  completed: <span class="cl">boolean</span>
+  invites: <span class="cl">string</span>[]    <span class="cm">// collaborator emails</span>
+  tasks: <span class="cl">AssignmentTask</span>[]
+}</code></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-top">
+          <div class="step-indicator"><div class="step-badge">3</div></div>
+          <div class="step-body">
+            <div class="step-title">Schedule event shape — <code>ScheduleEvent</code></div>
+            <div class="step-desc">Defined in <code>src/features/schedules/types</code>. The dashboard's schedule card needs today's events of category <code>class</code>; the frontend decides which one is "Live now" by comparing <code>start</code>/<code>end</code> to the current time.</div>
+            <div class="code-wrap">
+              <div class="code-header">
+                <span class="code-lang">TypeScript</span>
+                <div class="code-dots"><span></span><span></span><span></span></div>
+              </div>
+              <div class="code-body"><code><span class="kw">export interface</span> <span class="cl">ScheduleEvent</span> {
+  id: <span class="cl">number</span>
+  title: <span class="cl">string</span>
+  category: <span class="st">'class'</span> | <span class="st">'study'</span> | <span class="st">'meeting'</span> | <span class="st">'exam'</span> | <span class="st">'personal'</span>
+  date: <span class="cl">string</span>       <span class="cm">// ISO date, yyyy-mm-dd</span>
+  start: <span class="cl">string</span>      <span class="cm">// 24h 'HH:MM'</span>
+  end: <span class="cl">string</span>        <span class="cm">// 24h 'HH:MM'</span>
+  location: <span class="cl">string</span>
+  notes: <span class="cl">string</span>
+  important: <span class="cl">boolean</span>
+  reminderMinutes: <span class="cl">number</span> | <span class="kw">null</span>
+}</code></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════ SECTION 03 — API endpoints ════════════════════════════════════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <span class="section-title">Endpoints to build</span>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="endpoint-card">
+      <div class="endpoint-head">
+        <span class="method-badge get">GET</span>
+        <span class="endpoint-path">/api/v1/dashboard/summary</span>
+        <span class="endpoint-note">Auth required (JWT)</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Single aggregated call that powers the hero pills, the assignments counters, and the progress donut. Preferred over five separate calls — the dashboard renders all counters at once.</p>
+        <div class="output-wrap" style="margin-top:0">
+          <div class="output-header"><div class="output-dot"></div><span class="output-label">Response 200</span></div>
+          <div class="output-body"><code>{
+  "studentName": "Neath",
+  "date": "2026-07-03",
+  "classesToday": 1,
+  "dueThisWeek": 1,
+  "completionPct": 15,
+  "counts": {
+    "upcoming": 1, "overdue": 0, "done": 0,
+    "onTrack": 0, "behind": 1
+  }
+}</code></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="endpoint-card">
+      <div class="endpoint-head">
+        <span class="method-badge get">GET</span>
+        <span class="endpoint-path">/api/v1/schedules/today</span>
+        <span class="endpoint-note">Auth required</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Today's events for the schedule card, sorted by <code>start</code>. Return an empty array when there are no classes — the card has an empty state for that.</p>
+        <div class="output-wrap" style="margin-top:0">
+          <div class="output-header"><div class="output-dot"></div><span class="output-label">Response 200</span></div>
+          <div class="output-body"><code>[
+  {
+    "id": 12, "title": "Software Engineering",
+    "category": "class", "date": "2026-07-03",
+    "start": "08:00", "end": "11:59",
+    "location": "Room B2", "notes": "",
+    "important": false, "reminderMinutes": 15
+  }
+]</code></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="endpoint-card">
+      <div class="endpoint-head">
+        <span class="method-badge get">GET</span>
+        <span class="endpoint-path">/api/v1/assignments?dueWithinDays=7&amp;completed=false</span>
+        <span class="endpoint-note">Auth required</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Feeds the deadlines card and the quick-task row on the assignments card. Sorted by nearest deadline first. The frontend formats "Due in 6 days" from the ISO <code>deadline</code> — do not send pre-formatted labels.</p>
+        <div class="output-wrap" style="margin-top:0">
+          <div class="output-header"><div class="output-dot"></div><span class="output-label">Response 200</span></div>
+          <div class="output-body"><code>[
+  {
+    "id": 4, "title": "My assignment", "subject": "IT",
+    "deadline": "2026-07-09", "progress": 15,
+    "completed": false
+  }
+]</code></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="endpoint-card">
+      <div class="endpoint-head">
+        <span class="method-badge put">PATCH</span>
+        <span class="endpoint-path">/api/v1/assignments/{id}/completion</span>
+        <span class="endpoint-note">Auth required</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Backs the interactive checkbox on the assignments card (currently faked in <code>useDashboardProgress.ts</code>). Toggling must recalculate the summary counters, so the response returns them for an instant UI update.</p>
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang">Request</span><div class="code-dots"><span></span><span></span><span></span></div></div>
+          <div class="code-body"><code>{ <span class="st">"completed"</span>: <span class="kw">true</span> }</code></div>
+        </div>
+        <div class="output-wrap">
+          <div class="output-header"><div class="output-dot"></div><span class="output-label">Response 200</span></div>
+          <div class="output-body"><code>{
+  "id": 4, "completed": true, "progress": 100,
+  "counts": {
+    "upcoming": 0, "overdue": 0, "done": 1,
+    "onTrack": 0, "behind": 0
+  },
+  "completionPct": 100
+}</code></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="endpoint-card">
+      <div class="endpoint-head">
+        <span class="method-badge get">GET</span>
+        <span class="endpoint-path">/api/v1/groups/activity?limit=5</span>
+        <span class="endpoint-note">Auth required</span>
+      </div>
+      <div class="endpoint-body">
+        <p class="endpoint-desc">Recent activity across the student's study groups for the group-activity card. An empty <code>items</code> array triggers the "groups are quiet" empty state.</p>
+        <div class="output-wrap" style="margin-top:0">
+          <div class="output-header"><div class="output-dot"></div><span class="output-label">Response 200</span></div>
+          <div class="output-body"><code>{
+  "groupCount": 1,
+  "items": [
+    {
+      "id": 88, "groupId": 3, "groupName": "IT Squad",
+      "actorName": "Dara", "type": "message",
+      "summary": "posted in General",
+      "createdAt": "2026-07-03T09:40:00Z"
+    }
+  ]
+}</code></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════ SECTION 04 — Business rules ════════════════════════════════════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <span class="section-title">Business rules the backend must own</span>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="rule-card">
+      <div class="rule-label">Rule 1</div>
+      <h4>Counter definitions must be consistent everywhere</h4>
+      <p>The same numbers appear in three widgets, so compute them in one place. <code>upcoming</code> = not completed and deadline ≥ today. <code>overdue</code> = not completed and deadline &lt; today. <code>done</code> = completed. <code>onTrack</code>/<code>behind</code> split the non-completed set by whether <code>progress</code> is keeping pace with time elapsed toward the deadline. <code>completionPct</code> = done ÷ total assignments, rounded to an integer (0 when the student has no assignments — never divide by zero).</p>
+    </div>
+
+    <div class="rule-card">
+      <div class="rule-label">Rule 2</div>
+      <h4>Assignment progress is derived from tasks</h4>
+      <p>When an assignment has tasks, <code>progress</code> = done tasks ÷ total tasks. Marking the whole assignment complete sets <code>progress</code> to 100 and <code>completed</code> to true. This mirrors the existing frontend behavior in the assignments store, so the dashboard checkbox and the assignments page never disagree.</p>
+    </div>
+
+    <div class="rule-card">
+      <div class="rule-label">Rule 3</div>
+      <h4>Send raw dates and times, not display strings</h4>
+      <p>Return ISO dates (<code>yyyy-mm-dd</code>) and 24-hour <code>HH:MM</code> times. The frontend already formats "Due in 6 days", "8:00 AM – 11:59 PM", and picks the "Live now" class locally — pre-formatted strings would break that and ignore the user's timezone.</p>
+    </div>
+
+    <div class="rule-card">
+      <div class="rule-label">Rule 4</div>
+      <h4>Everything is scoped to the authenticated student</h4>
+      <p>All dashboard endpoints derive the student from the auth token — no <code>userId</code> query params. Assignments shared via <code>invites</code> should count toward the invited student's dashboard too.</p>
+      <div class="code-wrap" style="margin-top:0.6rem">
+        <div class="code-header"><span class="code-lang">Java</span><div class="code-dots"><span></span><span></span><span></span></div></div>
+        <div class="code-body"><code><span class="cm">// ✓ correct — resolve the student from the security context</span>
+<span class="an">@GetMapping</span>(<span class="st">"/dashboard/summary"</span>)
+<span class="kw">public</span> <span class="cl">DashboardSummary</span> <span class="fn">summary</span>(<span class="an">@AuthenticationPrincipal</span> <span class="cl">StudentUser</span> user) {
+    <span class="kw">return</span> dashboardService.<span class="fn">summaryFor</span>(user.<span class="fn">getId</span>());
+}
+
+<span class="cm">// ✗ wrong — trusting a client-supplied id</span>
+<span class="an">@GetMapping</span>(<span class="st">"/dashboard/summary"</span>)
+<span class="kw">public</span> <span class="cl">DashboardSummary</span> <span class="fn">summary</span>(<span class="an">@RequestParam</span> <span class="cl">Long</span> userId) { ... }</code></div>
+      </div>
+    </div>
+
+    <div class="rule-card">
+      <div class="rule-label">Rule 5</div>
+      <h4>"Due this week" and "classes today" use the student's local day</h4>
+      <p><code>dueThisWeek</code> counts non-completed assignments with a deadline within the next 7 days. <code>classesToday</code> counts today's events with category <code>class</code>. Accept an optional client timezone (header or query param) so "today" matches what the student sees.</p>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════ SECTION 05 — Hardcoded values to replace ════════════════════════════════════════ -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <span class="section-title">Current hardcoded values → real source</span>
+      <div class="section-line"></div>
+    </div>
+
+    <div class="info-card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Hardcoded today</th><th>Where in code</th><th>Replaced by</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>"Friday, June 12" + "Student" greeting</td><td><code>HeroSection.vue</code></td><td><code>date</code> + <code>studentName</code> from <code>/dashboard/summary</code></td></tr>
+            <tr><td><code>classesToday = 1</code></td><td><code>DashboardView.vue</code></td><td><code>classesToday</code> from <code>/dashboard/summary</code></td></tr>
+            <tr><td>Single "My assignment" (IT, due in 6 days, 15%)</td><td><code>DashboardView.vue</code></td><td><code>/assignments?dueWithinDays=7</code></td></tr>
+            <tr><td>"Live now, 8:00 AM – 11:59 PM" class</td><td><code>ScheduleCard.vue</code></td><td><code>/schedules/today</code> (live slot derived client-side)</td></tr>
+            <tr><td>Local toggle flipping all counters 0 ↔ 1</td><td><code>useDashboardProgress.ts</code></td><td><code>PATCH /assignments/{id}/completion</code></td></tr>
+            <tr><td>"1 group" pill + quiet-groups empty state</td><td><code>GroupActivityCard.vue</code></td><td><code>/groups/activity</code></td></tr>
+            <tr><td>Legend bar widths (6% / 100%)</td><td><code>ProgressCard.vue</code></td><td>Computed from <code>counts</code> in <code>/dashboard/summary</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warning">
+        <div class="callout-icon">⚠️</div>
+        <div class="callout-body">
+          <strong>No HTTP client exists in the frontend yet</strong>
+          <p>There is no axios/fetch layer, no <code>.env</code>, and no base URL configured. Once the backend publishes these endpoints (with CORS for the Vite dev origin), the frontend will add an API client and swap the stores over — so a stable contract matters more than an early ship date.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider" />
+
+  <!-- ════════════════════════════════════════ FOOTER NOTE ════════════════════════════════════════ -->
+  <div class="footer-note">
+    <div class="footer-note-icon">💡</div>
+    <div class="footer-note-body">
+      <strong>Prefer one aggregate over many small calls</strong>
+      <p>The dashboard renders six widgets on a single page load. <code>/dashboard/summary</code> plus the three list endpoints (schedule, deadlines, group activity) is the sweet spot — four parallel requests, each cacheable per student. Field names above match the frontend's existing TypeScript types exactly (<code>camelCase</code>), so keep the JSON casing as shown.</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

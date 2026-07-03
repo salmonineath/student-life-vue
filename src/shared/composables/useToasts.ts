@@ -14,6 +14,8 @@ export type ToastIcon =
   | 'clock'
   | 'calendar'
   | 'star'
+  | 'paperclip'
+  | 'mail'
 
 export interface Toast {
   id: number

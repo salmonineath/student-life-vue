@@ -5,12 +5,12 @@ import {
   Calendar,
   Check,
   CheckSquare,
-  FileCheck2,
+  FileText,
+  Paperclip,
   Plus,
   RotateCcw,
   Tag,
   Trash2,
-  Upload,
   Users,
   X,
 } from 'lucide-vue-next'
@@ -75,18 +75,20 @@ function addItem(): void {
   newItem.value = ''
 }
 
-// --- Proof upload ---
+// --- Attachments (plain files — no side effects on status/progress) ---
 const fileInput = ref<HTMLInputElement | null>(null)
-function onFileChosen(e: Event): void {
+function onFilesChosen(e: Event): void {
   const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (file && task.value) {
-    store.setTaskProof(props.assignmentId, task.value.id, {
-      name: file.name,
-      size: file.size,
-      uploadedAt: new Date().toISOString(),
-    })
-    push('Proof uploaded — task marked complete ✅', 'check-check', 'emerald')
+  const files = Array.from(input.files ?? [])
+  if (files.length && task.value) {
+    for (const file of files) {
+      store.addAttachment(props.assignmentId, task.value.id, {
+        name: file.name,
+        size: file.size,
+        uploadedAt: new Date().toISOString(),
+      })
+    }
+    push(files.length === 1 ? 'Attachment added' : `${files.length} attachments added`, 'paperclip', 'indigo')
   }
   input.value = ''
 }
@@ -289,36 +291,42 @@ watch(open, (isOpen) => {
             </div>
           </div>
 
-          <!-- Attachment / proof -->
+          <!-- Attachments -->
           <div>
             <p class="flex items-center gap-2 text-[12px] font-bold tracking-wide text-muted uppercase mb-2.5">
-              <Upload class="h-3.5 w-3.5" /> Attachment
+              <Paperclip class="h-3.5 w-3.5" /> Attachments
+              <span v-if="task.attachments.length" class="normal-case font-semibold">
+                ({{ task.attachments.length }})
+              </span>
             </p>
             <button
               type="button"
               class="w-full px-3.5 py-2.5 rounded-xl border border-indigo/30 text-indigo-ink text-[13px] font-semibold flex items-center justify-center gap-2 hover:bg-indigo/10 transition"
               @click="fileInput?.click()"
             >
-              <Upload class="h-4 w-4" /> {{ task.proof ? 'Replace proof' : 'Upload proof' }}
+              <Paperclip class="h-4 w-4" /> Add attachment
             </button>
-            <input ref="fileInput" type="file" class="hidden" @change="onFileChosen" />
+            <input ref="fileInput" type="file" multiple class="hidden" @change="onFilesChosen" />
 
-            <div
-              v-if="task.proof"
-              class="mt-2.5 flex items-center gap-2 text-[12.5px] text-emerald-ink bg-emerald/10 border border-emerald/20 rounded-lg px-3 py-2"
-            >
-              <FileCheck2 class="h-4 w-4 shrink-0" />
-              <span class="truncate font-medium flex-1">{{ task.proof.name }}</span>
-              <span class="text-emerald-ink/70 shrink-0">{{ formatFileSize(task.proof.size) }}</span>
-              <button
-                type="button"
-                class="text-emerald-ink/70 hover:text-danger-ink transition shrink-0"
-                title="Remove proof"
-                @click="store.clearProof(assignmentId, task.id)"
+            <ul v-if="task.attachments.length" class="mt-2.5 space-y-1.5">
+              <li
+                v-for="file in task.attachments"
+                :key="file.id"
+                class="flex items-center gap-2 text-[12.5px] text-ink bg-bg border border-border rounded-lg px-3 py-2"
               >
-                <X class="h-3.5 w-3.5" />
-              </button>
-            </div>
+                <FileText class="h-4 w-4 shrink-0 text-muted" />
+                <span class="truncate font-medium flex-1" :title="file.name">{{ file.name }}</span>
+                <span class="text-muted shrink-0">{{ formatFileSize(file.size) }}</span>
+                <button
+                  type="button"
+                  class="text-muted hover:text-danger-ink transition shrink-0"
+                  title="Remove attachment"
+                  @click="store.removeAttachment(assignmentId, task.id, file.id)"
+                >
+                  <X class="h-3.5 w-3.5" />
+                </button>
+              </li>
+            </ul>
           </div>
 
           <!-- Due date (from the assignment) -->

@@ -9,6 +9,7 @@ import {
   RotateCcw,
   Sparkles,
   Trash2,
+  UserPlus,
   type LucideIcon,
 } from 'lucide-vue-next'
 
@@ -47,6 +48,7 @@ const taskSummary = computed(() => {
   if (!tasks.length) return null
   return { done: tasks.filter((t) => t.status === 'done').length, total: tasks.length }
 })
+
 
 const status = computed(() => statusOf(props.assignment))
 const accent = computed<SubjectAccent>(() => subjectAccent(props.assignment.subject))
@@ -146,6 +148,13 @@ const badge = computed<Badge>(() => {
     <div class="flex items-center justify-between text-[12px] text-muted mb-3">
       <span class="flex items-center gap-1.5">
         <Calendar class="h-3.5 w-3.5" /> {{ formatDeadline(assignment.deadline) }}
+      </span>
+      <span
+        v-if="assignment.invites.length"
+        class="flex items-center gap-1.5"
+        :title="assignment.invites.join(', ')"
+      >
+        <UserPlus class="h-3.5 w-3.5" /> {{ assignment.invites.length }} invited
       </span>
     </div>
 

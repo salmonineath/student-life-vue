@@ -21,6 +21,8 @@ export interface ScheduleEvent {
   notes: string
   /** Flagged as high-priority. */
   important: boolean
+  /** Notify this many minutes before the event, or null for no notification. */
+  reminderMinutes: number | null
 }
 
 /** Editable fields submitted from the event form. */

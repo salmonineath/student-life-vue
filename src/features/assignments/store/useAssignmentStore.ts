@@ -8,7 +8,7 @@ import type {
   AssignmentDraft,
   AssignmentFilter,
   AssignmentTask,
-  TaskProof,
+  TaskAttachment,
 } from '@/features/assignments/types'
 
 /** Tallies shown in the four stat pills. */
@@ -26,7 +26,7 @@ function makeTask(id: number, title: string, partial: Partial<AssignmentTask> = 
     title,
     description: '',
     status: 'todo',
-    proof: null,
+    attachments: [],
     checklist: [],
     assigneeIds: [],
     ...partial,
@@ -43,6 +43,7 @@ function seed(): Assignment[] {
       deadline: '2026-06-18',
       progress: 25,
       completed: false,
+      invites: ['dara.sok@university.edu'],
       tasks: [
         makeTask(1, 'Gather requirements', {
           status: 'done',
@@ -66,6 +67,7 @@ function seed(): Assignment[] {
       deadline: '2026-06-14',
       progress: 60,
       completed: false,
+      invites: [],
       tasks: [
         makeTask(5, 'Read chapter 4', { status: 'done' }),
         makeTask(6, 'Solve exercises 1–4', { status: 'done' }),
@@ -82,6 +84,7 @@ function seed(): Assignment[] {
       deadline: '2026-06-10',
       progress: 40,
       completed: false,
+      invites: ['lina.chan@university.edu', 'rin.vibol@university.edu'],
       tasks: [
         makeTask(10, 'Collect campaign data', { status: 'done' }),
         makeTask(11, 'Identify key metrics', { status: 'done' }),
@@ -98,6 +101,7 @@ function seed(): Assignment[] {
       deadline: '2026-06-09',
       progress: 100,
       completed: true,
+      invites: [],
       tasks: [
         makeTask(15, 'Watch the lecture', { status: 'done' }),
         makeTask(16, 'Complete the worksheet', { status: 'done' }),
@@ -113,7 +117,7 @@ function seed(): Assignment[] {
  * Assignments are consumed by more than one view (the board list and the
  * detail page), so the data lives in Pinia rather than a view-local composable
  * — the same threshold `useNotificationStore` follows. Persisted so a student's
- * tasks, uploaded proof and progress survive a reload.
+ * tasks, attachments and progress survive a reload.
  */
 export const useAssignmentStore = defineStore(
   'assignments',
@@ -217,7 +221,6 @@ export const useAssignmentStore = defineStore(
       if (a.tasks.length) {
         a.tasks.forEach((t) => {
           t.status = becomingDone ? 'done' : 'todo'
-          if (!becomingDone) t.proof = null
         })
         recompute(a)
       } else if (becomingDone) {
@@ -228,6 +231,22 @@ export const useAssignmentStore = defineStore(
         if (a.progress >= 100) a.progress = 75
       }
       return becomingDone
+    }
+
+    // --- Invite actions ---
+    /** Invite an email to the assignment. Returns false on duplicates. */
+    function addInvite(assignmentId: number, email: string): boolean {
+      const a = find(assignmentId)
+      const normalized = email.trim().toLowerCase()
+      if (!a || !normalized) return false
+      if (a.invites.some((e) => e.toLowerCase() === normalized)) return false
+      a.invites.push(normalized)
+      return true
+    }
+
+    function removeInvite(assignmentId: number, email: string): void {
+      const a = find(assignmentId)
+      if (a) a.invites = a.invites.filter((e) => e !== email)
     }
 
     // --- Task actions ---
@@ -271,8 +290,6 @@ export const useAssignmentStore = defineStore(
       const t = a?.tasks.find((x) => x.id === taskId)
       if (!a || !t) return
       t.status = status
-      // Proof implies "done"; leaving done clears it so the two never disagree.
-      if (status !== 'done') t.proof = null
       recompute(a)
     }
 
@@ -300,23 +317,25 @@ export const useAssignmentStore = defineStore(
       a.tasks.splice(to, 0, moved)
     }
 
-    /**
-     * Attach uploaded proof to a task. Submitting proof auto-completes the
-     * task, which in turn bumps the assignment's progress.
-     */
-    function setTaskProof(assignmentId: number, taskId: number, proof: TaskProof): void {
-      const a = find(assignmentId)
-      const t = a?.tasks.find((x) => x.id === taskId)
-      if (!a || !t) return
-      t.proof = proof
-      t.status = 'done'
-      recompute(a)
+    /** Attach a file to a task. Purely informational — no status side effects. */
+    function addAttachment(
+      assignmentId: number,
+      taskId: number,
+      file: Omit<TaskAttachment, 'id'>,
+    ): void {
+      const t = findTask(assignmentId, taskId)
+      if (!t) return
+      const nextId =
+        assignments.value
+          .flatMap((a) => a.tasks)
+          .flatMap((x) => x.attachments)
+          .reduce((max, f) => Math.max(max, f.id), 0) + 1
+      t.attachments.push({ id: nextId, ...file })
     }
 
-    /** Remove proof without changing the task's done state. */
-    function clearProof(assignmentId: number, taskId: number): void {
+    function removeAttachment(assignmentId: number, taskId: number, attachmentId: number): void {
       const t = findTask(assignmentId, taskId)
-      if (t) t.proof = null
+      if (t) t.attachments = t.attachments.filter((f) => f.id !== attachmentId)
     }
 
     // --- Checklist actions ---
@@ -358,6 +377,8 @@ export const useAssignmentStore = defineStore(
       update,
       remove,
       toggleComplete,
+      addInvite,
+      removeInvite,
       addTask,
       addTasks,
       updateTask,
@@ -365,8 +386,8 @@ export const useAssignmentStore = defineStore(
       toggleTask,
       removeTask,
       reorderTask,
-      setTaskProof,
-      clearProof,
+      addAttachment,
+      removeAttachment,
       addChecklistItem,
       toggleChecklistItem,
       removeChecklistItem,
@@ -380,14 +401,28 @@ export const useAssignmentStore = defineStore(
       // Backfill fields added after a user's data was first persisted.
       afterHydrate: (ctx) => {
         const list = (ctx.store.assignments ?? []) as Assignment[]
+        let attachmentId =
+          list
+            .flatMap((a) => a.tasks ?? [])
+            .flatMap((t) => t.attachments ?? [])
+            .reduce((max, f) => Math.max(max, f.id), 0) + 1
         list.forEach((a) => {
+          if (!Array.isArray(a.invites)) a.invites = []
+          delete (a as Assignment & { memberIds?: number[] }).memberIds
           a.tasks?.forEach((t) => {
-            const legacy = t as AssignmentTask & { done?: boolean }
+            const legacy = t as AssignmentTask & {
+              done?: boolean
+              proof?: { name: string; size: number; uploadedAt: string } | null
+            }
             if (!legacy.status) legacy.status = legacy.done ? 'done' : 'todo'
             delete legacy.done
             if (typeof t.description !== 'string') t.description = ''
             if (!Array.isArray(t.checklist)) t.checklist = []
             if (!Array.isArray(t.assigneeIds)) t.assigneeIds = []
+            if (!Array.isArray(t.attachments)) t.attachments = []
+            // Migrate the old single "proof" file into the attachments list.
+            if (legacy.proof) t.attachments.push({ id: attachmentId++, ...legacy.proof })
+            delete legacy.proof
           })
         })
       },

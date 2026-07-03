@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   AlarmClock,
@@ -9,12 +9,14 @@ import {
   CircleCheckBig,
   Clock,
   ClipboardX,
+  Share2,
+  UserPlus,
   type LucideIcon,
 } from 'lucide-vue-next'
 
 import AssignmentTaskList from '@/features/assignments/components/AssignmentTaskList.vue'
 import AssignmentPlanPanel from '@/features/assignments/components/AssignmentPlanPanel.vue'
-import ToastStack from '@/shared/components/ToastStack.vue'
+import InviteMemberModal from '@/features/assignments/components/InviteMemberModal.vue'
 
 import { useAssignmentStore } from '@/features/assignments/store/useAssignmentStore'
 import { useToasts } from '@/shared/composables/useToasts'
@@ -34,6 +36,8 @@ const { push } = useToasts()
 
 const id = computed(() => Number(route.params.id))
 const assignment = computed(() => store.find(id.value))
+
+const inviteOpen = ref(false)
 
 const accent = computed<SubjectAccent>(() =>
   assignment.value ? subjectAccent(assignment.value.subject) : 'indigo',
@@ -157,17 +161,35 @@ function onAddTasks(titles: string[]): void {
               <CircleCheckBig class="h-4 w-4" />
               {{ assignment.tasks.filter((t) => t.status === 'done').length }}/{{ assignment.tasks.length }} tasks
             </span>
+            <span
+              v-if="assignment.invites.length"
+              class="flex items-center gap-1.5"
+              :title="assignment.invites.join(', ')"
+            >
+              <UserPlus class="h-4 w-4" />
+              {{ assignment.invites.length }} invited
+            </span>
           </div>
         </div>
 
-        <button
-          type="button"
-          class="self-start shrink-0 h-10 px-4 rounded-xl border border-border text-ink text-[13.5px] font-semibold flex items-center gap-2 hover:bg-bg transition"
-          @click="store.toggleComplete(assignment.id)"
-        >
-          <Check class="h-4 w-4" />
-          {{ statusOf(assignment) === 'done' ? 'Reopen' : 'Mark complete' }}
-        </button>
+        <div class="flex items-center gap-2 self-start shrink-0">
+          <button
+            type="button"
+            class="h-10 px-4 rounded-xl text-white text-[13.5px] font-semibold flex items-center gap-2 shadow-md shadow-indigo/25 hover:-translate-y-0.5 transition"
+            style="background: linear-gradient(135deg, var(--indigo), #4338ca)"
+            @click="inviteOpen = true"
+          >
+            <Share2 class="h-4 w-4" /> Share
+          </button>
+          <button
+            type="button"
+            class="h-10 px-4 rounded-xl border border-border text-ink text-[13.5px] font-semibold flex items-center gap-2 hover:bg-bg transition"
+            @click="store.toggleComplete(assignment.id)"
+          >
+            <Check class="h-4 w-4" />
+            {{ statusOf(assignment) === 'done' ? 'Reopen' : 'Mark complete' }}
+          </button>
+        </div>
       </div>
 
       <!-- Progress -->
@@ -194,7 +216,8 @@ function onAddTasks(titles: string[]): void {
         <AssignmentPlanPanel :assignment="assignment" @add-tasks="onAddTasks" />
       </div>
     </div>
+
+    <InviteMemberModal v-model:open="inviteOpen" :assignment-id="assignment.id" />
   </template>
 
-  <ToastStack />
 </template>

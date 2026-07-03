@@ -9,11 +9,11 @@ import AssignmentToolbar from '@/features/assignments/components/AssignmentToolb
 import AssignmentList from '@/features/assignments/components/AssignmentList.vue'
 import AssignmentFormModal from '@/features/assignments/components/AssignmentFormModal.vue'
 import AiPlannerModal from '@/features/assignments/components/AiPlannerModal.vue'
-import ToastStack from '@/shared/components/ToastStack.vue'
 import SparkLayer from '@/features/assignments/components/SparkLayer.vue'
 
 import { useAssignmentStore } from '@/features/assignments/store/useAssignmentStore'
 import { useToasts } from '@/shared/composables/useToasts'
+import { useConfirm } from '@/shared/composables/useConfirm'
 import { daysLeft, statusOf } from '@/features/assignments/helpers'
 import type { Assignment, AssignmentDraft } from '@/features/assignments/types'
 
@@ -23,6 +23,7 @@ const { assignments, search, filter, filtered, stats } = storeToRefs(store)
 const { create, update, remove, find, toggleComplete } = store
 
 const { push } = useToasts()
+const { confirm } = useConfirm()
 
 function openDetail(id: number): void {
   router.push({ name: 'assignment-detail', params: { id } })
@@ -68,7 +69,15 @@ function onToggle(id: number): void {
   if (a && becameDone) push(`"${a.title}" completed! 🎉`, 'party', 'emerald')
 }
 
-function onRemove(id: number): void {
+async function onRemove(id: number): Promise<void> {
+  const a = find(id)
+  const ok = await confirm({
+    title: 'Delete assignment?',
+    message: a ? `"${a.title}" and all of its tasks will be permanently removed.` : undefined,
+    confirmLabel: 'Delete',
+    danger: true,
+  })
+  if (!ok) return
   remove(id)
   push('Assignment deleted', 'trash', 'danger')
 }
@@ -157,6 +166,5 @@ onMounted(() => {
     :preselect-id="preselectId"
   />
 
-  <ToastStack />
   <SparkLayer />
 </template>

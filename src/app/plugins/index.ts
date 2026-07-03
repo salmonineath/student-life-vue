@@ -17,6 +17,7 @@ export function registerPlugins(app: App): void {
   app.use(pinia)
   app.use(router)
 
-  // Providers run after pinia/router so they may safely use stores.
-  registerProviders(app)
+  // Providers receive the pinia instance so store access doesn't depend on
+  // the module-global active pinia (fragile outside component setup / HMR).
+  registerProviders(app, pinia)
 }

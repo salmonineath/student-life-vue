@@ -42,6 +42,7 @@ function seed(): ScheduleEvent[] {
     location: '',
     notes: '',
     important: false,
+    reminderMinutes: null,
     ...extra,
   })
 
@@ -50,7 +51,11 @@ function seed(): ScheduleEvent[] {
     ev('Study group — Algorithms', 'study', 0, '10:00', '11:30'),
     ev('Project standup', 'meeting', 1, '09:00', '09:45', { location: 'Online' }),
     ev('UX Design Workshop', 'class', 1, '13:00', '15:00', { location: 'Lab 3' }),
-    ev('Database midterm', 'exam', 2, '09:30', '11:00', { important: true, location: 'Hall A' }),
+    ev('Database midterm', 'exam', 2, '09:30', '11:00', {
+      important: true,
+      location: 'Hall A',
+      reminderMinutes: 30,
+    }),
     ev('Gym', 'personal', 2, '17:00', '18:00'),
     ev('Marketing Lecture', 'class', 3, '08:15', '09:45', { location: 'Room C101' }),
     ev('Thesis advisor meeting', 'meeting', 3, '14:00', '14:45', { important: true }),
@@ -185,6 +190,13 @@ export const useScheduleStore = defineStore(
     persist: {
       key: STORAGE_KEYS.schedules,
       pick: ['events', 'view'],
+      // Backfill fields added after a user's data was first persisted.
+      afterHydrate: (ctx) => {
+        const events = (ctx.store.events ?? []) as ScheduleEvent[]
+        events.forEach((e) => {
+          if (e.reminderMinutes === undefined) e.reminderMinutes = null
+        })
+      },
     },
   },
 )

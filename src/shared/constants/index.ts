@@ -11,4 +11,6 @@ export const STORAGE_KEYS = {
   app: 'sl.app',
   assignments: 'sl.assignments',
   schedules: 'sl.schedules',
+  /** Reminder keys that already fired, so reloads don't re-notify. */
+  firedReminders: 'sl.fired-reminders',
 } as const

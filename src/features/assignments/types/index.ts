@@ -4,13 +4,14 @@ export type AssignmentStatus = 'todo' | 'progress' | 'done'
 /** Active toolbar filter. */
 export type AssignmentFilter = 'all' | 'active' | 'done' | 'late'
 
-/** Metadata for a proof-of-research file a student uploads against a task. */
-export interface TaskProof {
+/** Metadata for a file a student attaches to a task (any type: image, pdf, doc…). */
+export interface TaskAttachment {
+  id: number
   /** Original file name. */
   name: string
   /** File size in bytes. */
   size: number
-  /** ISO timestamp of when it was uploaded. */
+  /** ISO timestamp of when it was attached. */
   uploadedAt: string
 }
 
@@ -36,7 +37,7 @@ export interface Member {
 
 /**
  * A single actionable task within an assignment. Completing a task (by
- * uploading proof, or ticking it off) drives the assignment's progress.
+ * ticking it off) drives the assignment's progress.
  */
 export interface AssignmentTask {
   id: number
@@ -45,8 +46,8 @@ export interface AssignmentTask {
   description: string
   /** Workflow status: To do → In progress → Done. */
   status: TaskStatus
-  /** Uploaded proof of research, or null if none submitted yet. */
-  proof: TaskProof | null
+  /** Files attached to the task. Purely informational — no status side effects. */
+  attachments: TaskAttachment[]
   /** Sub-steps tracked within the task. */
   checklist: ChecklistItem[]
   /** Ids of the members this task is assigned to. */
@@ -65,11 +66,13 @@ export interface Assignment {
   deadline: string
   /**
    * Completion percentage (0–100). Derived from `tasks` when any exist,
-   * otherwise set manually via the form's slider.
+   * otherwise driven by marking the assignment complete.
    */
   progress: number
   /** Explicitly marked complete (also implied by progress >= 100). */
   completed: boolean
+  /** Emails of people invited to work on this assignment. */
+  invites: string[]
   /** Breakdown of work; completing these auto-updates `progress`. */
   tasks: AssignmentTask[]
 }

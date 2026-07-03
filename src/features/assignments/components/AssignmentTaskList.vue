@@ -16,10 +16,22 @@ import TaskDetailModal from './TaskDetailModal.vue'
 import { findMember } from '@/features/assignments/members'
 import type { Assignment } from '@/features/assignments/types'
 import { useAssignmentStore } from '@/features/assignments/store/useAssignmentStore'
+import { useConfirm } from '@/shared/composables/useConfirm'
 
 const props = defineProps<{ assignment: Assignment }>()
 
 const store = useAssignmentStore()
+const { confirm } = useConfirm()
+
+async function removeTask(taskId: number, title: string): Promise<void> {
+  const ok = await confirm({
+    title: 'Remove task?',
+    message: `"${title}" will be removed from this assignment.`,
+    confirmLabel: 'Remove',
+    danger: true,
+  })
+  if (ok) store.removeTask(props.assignment.id, taskId)
+}
 
 const newTitle = ref('')
 const openTaskId = ref<number | null>(null)
@@ -74,8 +86,8 @@ function assignees(ids: number[]) {
     </div>
 
     <p class="text-[12.5px] text-muted mb-4 leading-snug">
-      Drag to reorder. Click a task to add details, a checklist and assignees. Upload proof to
-      auto-complete it — progress updates as you go.
+      Drag to reorder. Click a task to add details, a checklist, assignees and attachments.
+      Tick tasks off as you finish them — progress updates as you go.
     </p>
 
     <ul class="space-y-2.5">
@@ -141,11 +153,11 @@ function assignees(ids: number[]) {
                 {{ task.checklist.filter((c) => c.done).length }}/{{ task.checklist.length }}
               </span>
               <span
-                v-if="task.proof"
-                class="flex items-center gap-1 text-emerald-ink font-medium"
-                title="Proof uploaded"
+                v-if="task.attachments.length"
+                class="flex items-center gap-1"
+                :title="`${task.attachments.length} attachment${task.attachments.length > 1 ? 's' : ''}`"
               >
-                <Paperclip class="h-3.5 w-3.5" /> Proof
+                <Paperclip class="h-3.5 w-3.5" /> {{ task.attachments.length }}
               </span>
               <span v-if="task.assigneeIds.length" class="flex items-center -space-x-1.5">
                 <MemberAvatar
@@ -162,7 +174,7 @@ function assignees(ids: number[]) {
             type="button"
             title="Remove task"
             class="h-8 w-8 shrink-0 grid place-items-center rounded-lg border border-danger/30 text-danger-ink hover:bg-danger/10 transition"
-            @click.stop="store.removeTask(assignment.id, task.id)"
+            @click.stop="removeTask(task.id, task.title)"
           >
             <Trash2 class="h-3.5 w-3.5" />
           </button>
