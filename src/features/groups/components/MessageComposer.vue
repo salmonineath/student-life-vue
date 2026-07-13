@@ -10,6 +10,8 @@ const textarea = ref<HTMLTextAreaElement | null>(null)
 function autoGrow(): void {
   const el = textarea.value
   if (!el) return
+  // Reset height first so scrollHeight reflects the content's natural size
+  // rather than the previously-set (possibly larger) height.
   el.style.height = 'auto'
   el.style.height = `${el.scrollHeight}px`
 }
@@ -18,6 +20,7 @@ function submit(): void {
   if (!draft.value.trim()) return
   emit('send', draft.value)
   draft.value = ''
+  // Wait for the cleared v-model to reach the DOM before measuring/shrinking.
   nextTick(autoGrow)
 }
 

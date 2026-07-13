@@ -173,7 +173,14 @@ export function layoutDayEvents(events: ScheduleEvent[]): LaidOutEvent[] {
   let cluster: ScheduleEvent[] = []
   let clusterEnd = -1
 
+  // Assigns every event in the current cluster to the first free column
+  // (one whose previous occupant has already ended by the time this event
+  // starts), reusing columns whenever possible so the lane count stays
+  // minimal. `lanes` (the total column count) is only known once the whole
+  // cluster has been placed, so all events in a cluster share the same
+  // `lanes` value.
   const flush = () => {
+    // colEnds[i] = end time (minutes) of the last event placed in column i.
     const colEnds: number[] = []
     const cols = new Map<number, number>()
     for (const ev of cluster) {
@@ -198,6 +205,8 @@ export function layoutDayEvents(events: ScheduleEvent[]): LaidOutEvent[] {
   }
 
   for (const ev of sorted) {
+    // A new event starting at/after the latest end time seen in the cluster
+    // means no overlap is possible — the current cluster is complete.
     if (cluster.length && timeToMinutes(ev.start) >= clusterEnd) {
       flush()
       clusterEnd = -1

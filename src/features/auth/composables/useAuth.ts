@@ -1,19 +1,23 @@
 import { storeToRefs } from 'pinia'
 
-import { useAuthStore } from '@/features/auth/store/useAuthStore'
+import { useAuthStore } from '@/features/auth/store/auth.reducer'
+import { loginAction, logoutAction, registerAction } from '@/features/auth/store/auth.action'
 
-/**
- * Thin composable exposing auth state/actions to components without them
- * reaching into the store directly. Keeps components decoupled from Pinia.
- */
 export function useAuth() {
   const store = useAuthStore()
-  const { user, isAuthenticated } = storeToRefs(store)
+  // storeToRefs keeps these reactive when destructured (plain destructuring
+  // off a Pinia store would lose reactivity). Views currently track their
+  // own local loading/error state and don't consume these, but they're
+  // exposed here for any consumer that wants the store's canonical state.
+  const { user, isAuthenticated, loading, error } = storeToRefs(store)
 
   return {
     user,
     isAuthenticated,
-    login: store.login,
-    logout: store.logout,
+    loading,
+    error,
+    login: loginAction,
+    register: registerAction,
+    logout: logoutAction,
   }
 }

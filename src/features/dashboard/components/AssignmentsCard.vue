@@ -31,21 +31,27 @@ const sparks = ref<Spark[]>([])
 let sparkId = 0
 const SPARK_CHARS = ['✦', '✶', '✨', '●']
 const SPARK_COLORS = ['#10B981', '#4F46E5', '#F59E0B']
+const SPARK_COUNT = 6
+// Sparks auto-remove after this timeout, which must exceed the CSS spark
+// animation duration so they don't get yanked mid-animation.
+const SPARK_LIFETIME_MS = 950
 
 function spawnSparks(): void {
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < SPARK_COUNT; i++) {
     const id = sparkId++
     sparks.value.push({
       id,
-      char: SPARK_CHARS[i % 4],
+      // Cycle through the palettes by index so consecutive sparks vary in
+      // look without needing per-spark randomness.
+      char: SPARK_CHARS[i % SPARK_CHARS.length],
       left: 8 + Math.random() * 16,
-      color: SPARK_COLORS[i % 3],
+      color: SPARK_COLORS[i % SPARK_COLORS.length],
       size: 10 + Math.random() * 8,
       delay: i * 0.04,
     })
     window.setTimeout(() => {
       sparks.value = sparks.value.filter((s) => s.id !== id)
-    }, 950)
+    }, SPARK_LIFETIME_MS)
   }
 }
 

@@ -105,6 +105,8 @@ export const useScheduleStore = defineStore(
         .filter((e) => {
           const d = parseDate(e.date)
           if (d > todayD) return true
+          // Today's events still count as "upcoming" until they actually end,
+          // not just until they start (so an in-progress event still shows).
           if (isSameDay(d, todayD)) return timeToMinutes(e.end) >= nowMin
           return false
         })

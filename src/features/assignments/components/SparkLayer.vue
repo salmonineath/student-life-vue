@@ -16,6 +16,7 @@ const { sparks } = useSparks()
       color: s.color,
       fontSize: `${s.size}px`,
       animationDelay: `${s.delay}s`,
+      // Above modals/overlays (z-50) so a completion burst is never hidden behind them.
       zIndex: 70,
     }"
   >

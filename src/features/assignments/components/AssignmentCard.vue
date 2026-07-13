@@ -31,6 +31,7 @@ const { burst } = useSparks()
 function onComplete(ev: MouseEvent): void {
   const target = ev.currentTarget as HTMLElement
   const rect = target.getBoundingClientRect()
+  // Anchor the burst to the button's top-center regardless of viewport scroll/layout.
   burst(rect.left + rect.width / 2, rect.top)
   emit('toggle', props.assignment.id)
 }
@@ -49,7 +50,6 @@ const taskSummary = computed(() => {
   return { done: tasks.filter((t) => t.status === 'done').length, total: tasks.length }
 })
 
-
 const status = computed(() => statusOf(props.assignment))
 const accent = computed<SubjectAccent>(() => subjectAccent(props.assignment.subject))
 
@@ -61,6 +61,8 @@ const TAG_CLASSES: Record<SubjectAccent, string> = {
   danger: 'text-danger-ink bg-danger/12',
 }
 
+// Progress bar color signals urgency: green once done, red once overdue,
+// amber otherwise — independent of the badge below, which also shows day counts.
 const barGradient = computed(() => {
   if (status.value === 'done') return 'linear-gradient(90deg, var(--emerald), var(--emerald-dark))'
   if (daysLeft(props.assignment.deadline) < 0) return 'linear-gradient(90deg, var(--danger), #dc2626)'
@@ -81,6 +83,7 @@ const badge = computed<Badge>(() => {
       class: 'text-emerald-ink bg-emerald/15',
     }
   }
+  // Ordered from most to least urgent: overdue > due today > due soon (<=3d) > later.
   const dl = daysLeft(props.assignment.deadline)
   if (dl < 0) return { icon: AlarmClock, label: `${Math.abs(dl)}d overdue`, class: 'text-white bg-danger' }
   if (dl === 0) return { icon: AlarmClock, label: 'Due today', class: 'text-white bg-danger' }

@@ -16,6 +16,12 @@ import TaskDetailModal from './TaskDetailModal.vue'
 import { findMember } from '@/features/assignments/members'
 import type { Assignment } from '@/features/assignments/types'
 import { useAssignmentStore } from '@/features/assignments/store/useAssignmentStore'
+import {
+  createTaskAction,
+  removeTaskAction,
+  setTaskStatusAction,
+  reorderTasksAction,
+} from '@/features/assignments/store/assignments.action'
 import { useConfirm } from '@/shared/composables/useConfirm'
 
 const props = defineProps<{ assignment: Assignment }>()
@@ -30,7 +36,7 @@ async function removeTask(taskId: number, title: string): Promise<void> {
     confirmLabel: 'Remove',
     danger: true,
   })
-  if (ok) store.removeTask(props.assignment.id, taskId)
+  if (ok) await removeTaskAction(taskId)
 }
 
 const newTitle = ref('')
@@ -47,18 +53,35 @@ function onDragStart(taskId: number, e: DragEvent): void {
 
 function onDragEnter(targetId: number): void {
   if (draggingId.value !== null && draggingId.value !== targetId) {
+    // Optimistic local reorder; API call happens on dragend. Reordering on every
+    // dragenter (rather than only on drop) is what gives the live "shuffle as you
+    // drag" feel instead of the list only updating once the drag finishes.
     store.reorderTask(props.assignment.id, draggingId.value, targetId)
   }
 }
 
-function onDragEnd(): void {
-  draggingId.value = null
+async function onDragEnd(): Promise<void> {
+  if (draggingId.value !== null) {
+    // The store's task array has already been reordered locally via onDragEnter;
+    // read the final order back out to persist it in one request.
+    const orderedIds = props.assignment.tasks.map((t) => t.id)
+    draggingId.value = null
+    await reorderTasksAction(props.assignment.id, orderedIds)
+  } else {
+    draggingId.value = null
+  }
 }
 
-function addTask(): void {
+async function addTask(): Promise<void> {
   if (!newTitle.value.trim()) return
-  store.addTask(props.assignment.id, newTitle.value)
+  const title = newTitle.value
   newTitle.value = ''
+  await createTaskAction(props.assignment.id, title)
+}
+
+async function toggleTask(taskId: number): Promise<void> {
+  const t = store.findTask(props.assignment.id, taskId)
+  if (t) await setTaskStatusAction(taskId, t.status === 'done' ? 'todo' : 'done')
 }
 
 function openTask(id: number): void {
@@ -124,7 +147,7 @@ function assignees(ids: number[]) {
             class="h-6 w-6 mt-0.5 shrink-0 rounded-lg border-2 grid place-items-center transition"
             :class="task.status === 'done' ? 'border-emerald bg-emerald text-white' : 'border-border text-transparent hover:border-emerald'"
             :aria-label="task.status === 'done' ? 'Mark task not done' : 'Mark task done'"
-            @click.stop="store.toggleTask(assignment.id, task.id)"
+            @click.stop="toggleTask(task.id)"
           >
             <Check class="h-3.5 w-3.5" />
           </button>

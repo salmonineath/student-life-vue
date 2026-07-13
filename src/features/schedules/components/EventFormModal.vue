@@ -57,6 +57,8 @@ function loadReminder(minutes: number | null): void {
   }
 }
 
+// Converts the value+unit pair back to minutes for storage, guarding against
+// negative/fractional input from the number field before scaling by unit.
 const reminderMinutes = computed<number | null>(() =>
   hasReminder.value ? Math.max(0, Math.round(reminderValue.value)) * UNIT_MINUTES[reminderUnit.value] : null,
 )

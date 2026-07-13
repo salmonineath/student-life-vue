@@ -22,6 +22,8 @@ const inviteEmail = ref('')
 const inviteError = ref('')
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// How long a required-field error highlight stays visible before clearing itself.
+const FIELD_ERROR_FLASH_MS = 1500
 
 const titleError = ref(false)
 const deadlineError = ref(false)
@@ -98,7 +100,7 @@ function flash(field: 'title' | 'deadline'): void {
   flag.value = true
   window.setTimeout(() => {
     flag.value = false
-  }, 1500)
+  }, FIELD_ERROR_FLASH_MS)
 }
 
 function onKeydown(e: KeyboardEvent): void {

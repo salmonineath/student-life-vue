@@ -21,7 +21,11 @@ import type { Conversation } from '@/features/groups/types'
 const props = defineProps<{ conversation: Conversation }>()
 defineEmits<{ close: [] }>()
 
+// memberCount is only populated for group chats, so its presence is used as
+// the group/DM discriminator (see also ChatHeader.vue, ConversationRow.vue).
 const isGroup = computed(() => props.conversation.memberCount != null)
+// memberCount (when present) is the group's real roster size; `members` here
+// may only hold a preview subset, so it's used as a fallback for DMs/small lists.
 const memberTotal = computed(() => props.conversation.memberCount ?? props.conversation.members.length)
 
 const PHOTOS = [
@@ -152,6 +156,7 @@ const FILE_ROWS = [
         </div>
       </div>
 
+      <!-- Only show "view all" when the roster is larger than the preview list rendered above -->
       <button
         v-if="memberTotal > conversation.members.length"
         class="w-full mt-2 py-2.5 rounded-xl text-[13px] font-medium text-emerald-ink hover:bg-emerald/10 transition"

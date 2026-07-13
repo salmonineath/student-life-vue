@@ -21,12 +21,17 @@ export interface StudyPlan {
  * with a buffer day. Pure function — the modal handles the typing animation.
  */
 export function buildStudyPlan(a: Assignment): StudyPlan {
+  // Clamp to at least 1 day so overdue/due-today assignments still get a
+  // (single-day, sprint-style) plan instead of dividing by zero/negative below.
   const dl = Math.max(daysLeft(a.deadline), 1)
   const remaining = 100 - a.progress
   const intro =
     `Here's a focused plan for <b>${a.title}</b> (${a.subject}). ` +
     `You have <b>${dl} day${dl > 1 ? 's' : ''}</b> and <b>${remaining}%</b> left to complete.`
 
+  // Plan shape is tiered by runway: same-day/overdue gets a triage-and-sprint
+  // plan, a short window gets a 2-3 day breakdown, anything longer gets
+  // milestones with a review buffer day built in.
   let steps: PlanStep[]
   if (dl <= 1) {
     steps = [
@@ -43,6 +48,9 @@ export function buildStudyPlan(a: Assignment): StudyPlan {
       { title: 'Final day — Review', detail: 'Edit, fact-check, format to the rubric, then submit early.' },
     ]
   } else {
+    // Spread remaining progress over at most 6 study days (the last day is
+    // reserved as a buffer below), so the per-day target doesn't get diluted
+    // to near-zero on very long deadlines.
     const perDay = Math.ceil(remaining / Math.min(dl, 6))
     steps = [
       { title: 'Set milestones', detail: `Aim for about +${perDay}% each study day to stay comfortably ahead.` },

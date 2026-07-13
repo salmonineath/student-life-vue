@@ -3,6 +3,10 @@ import { computed, ref, watch } from 'vue'
 import { Mail, Send, X } from 'lucide-vue-next'
 
 import { useAssignmentStore } from '@/features/assignments/store/useAssignmentStore'
+import {
+  sendInviteAction,
+  revokeInviteAction,
+} from '@/features/assignments/store/assignments.action'
 import { useToasts } from '@/shared/composables/useToasts'
 
 const open = defineModel<boolean>('open', { required: true })
@@ -16,6 +20,7 @@ const assignment = computed(() => store.find(props.assignmentId))
 
 const email = ref('')
 const error = ref('')
+const sending = ref(false)
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -26,19 +31,35 @@ watch(open, (isOpen) => {
   error.value = ''
 })
 
-function send(): void {
-  const value = email.value.trim()
+async function send(): Promise<void> {
+  const value = email.value.trim().toLowerCase()
   if (!EMAIL_RE.test(value)) {
     error.value = 'Enter a valid email address, e.g. teammate@university.edu'
     return
   }
-  if (!store.addInvite(props.assignmentId, value)) {
+  if (assignment.value?.invites.includes(value)) {
     error.value = 'That email has already been invited.'
     return
   }
-  push(`Invitation sent to <b>${value}</b>`, 'mail', 'indigo')
-  email.value = ''
+  sending.value = true
   error.value = ''
+  try {
+    await sendInviteAction(props.assignmentId, value)
+    push(`Invitation sent to <b>${value}</b>`, 'mail', 'indigo')
+    email.value = ''
+  } catch {
+    error.value = 'Failed to send invitation. Please try again.'
+  } finally {
+    sending.value = false
+  }
+}
+
+async function revokeInvite(inviteEmail: string): Promise<void> {
+  try {
+    await revokeInviteAction(props.assignmentId, inviteEmail)
+  } catch {
+    push('Failed to remove invite.', 'x', 'danger')
+  }
 }
 
 function close(): void {
@@ -94,10 +115,11 @@ watch(open, (isOpen) => {
             </div>
             <button
               type="submit"
-              class="h-[42px] px-4 rounded-xl text-white text-[13.5px] font-semibold flex items-center gap-2 shadow-md shadow-indigo/25 hover:-translate-y-0.5 transition"
+              :disabled="sending"
+              class="h-[42px] px-4 rounded-xl text-white text-[13.5px] font-semibold flex items-center gap-2 shadow-md shadow-indigo/25 hover:-translate-y-0.5 transition disabled:opacity-60 disabled:cursor-not-allowed"
               style="background: linear-gradient(135deg, var(--indigo), #4338ca)"
             >
-              <Send class="h-4 w-4" /> Send
+              <Send class="h-4 w-4" /> {{ sending ? 'Sending…' : 'Send' }}
             </button>
           </form>
           <p v-if="error" role="alert" class="mt-2 text-[12.5px] text-danger-ink">{{ error }}</p>
@@ -119,7 +141,7 @@ watch(open, (isOpen) => {
                   type="button"
                   class="text-muted hover:text-danger-ink transition shrink-0"
                   :title="`Remove ${invited}`"
-                  @click="store.removeInvite(assignmentId, invited)"
+                  @click="revokeInvite(invited)"
                 >
                   <X class="h-3.5 w-3.5" />
                 </button>

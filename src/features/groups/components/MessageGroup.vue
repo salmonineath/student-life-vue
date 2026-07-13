@@ -15,6 +15,7 @@ const props = defineProps<{
 const NAME_COLORS = ['text-indigo-ink', 'text-amber-ink', 'text-emerald-ink']
 const nameColor = computed(() => NAME_COLORS[props.sender.id % NAME_COLORS.length])
 
+// Staggered animation-delay values (seconds) for the voice-message waveform bars.
 const WAVE = Array.from({ length: 11 }, (_, i) => i * 0.1)
 </script>
 

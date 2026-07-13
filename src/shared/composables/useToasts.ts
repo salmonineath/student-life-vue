@@ -30,6 +30,11 @@ export interface Toast {
 const toasts = ref<Toast[]>([])
 let seq = 0
 
+// Must match the CSS exit transition duration on .toast.out in ToastStack.
+const EXIT_ANIMATION_MS = 350
+// How long a toast stays visible before auto-dismissing.
+const AUTO_DISMISS_MS = 4200
+
 /**
  * Global toast queue.
  *
@@ -44,13 +49,13 @@ export function useToasts() {
     target.leaving = true
     window.setTimeout(() => {
       toasts.value = toasts.value.filter((t) => t.id !== id)
-    }, 350)
+    }, EXIT_ANIMATION_MS)
   }
 
   function push(msg: string, icon: ToastIcon = 'check', color: ToastColor = 'indigo'): number {
     const id = seq++
     toasts.value.push({ id, msg, icon, color, leaving: false })
-    window.setTimeout(() => dismiss(id), 4200)
+    window.setTimeout(() => dismiss(id), AUTO_DISMISS_MS)
     return id
   }
 

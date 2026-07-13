@@ -37,6 +37,7 @@ const presenceColor: Record<Presence, string> = {
       class="h-full w-full object-cover"
       :class="square ? 'rounded-2xl' : 'rounded-full'"
     />
+    <!-- Initials font scales proportionally with avatar size (~1/3) so it stays legible at any size -->
     <span
       v-else
       class="h-full w-full grid place-items-center text-white font-display font-bold"
@@ -46,6 +47,7 @@ const presenceColor: Record<Presence, string> = {
       {{ initials || (name ? name.slice(0, 2).toUpperCase() : '?') }}
     </span>
 
+    <!-- Presence dot size scales with avatar size but has a floor so it stays visible on small avatars -->
     <span
       v-if="presence"
       class="absolute -bottom-0.5 -right-0.5 rounded-full ring-2 ring-white"

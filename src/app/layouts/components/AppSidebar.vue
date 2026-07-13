@@ -60,6 +60,7 @@ const navItems: NavItem[] = [
         custom
         v-slot="{ isActive, isExactActive, href, navigate }"
       >
+        <!-- Dashboard ('/') needs an exact match; every other route is nested under '/' and would otherwise also count as active. -->
         <a
           :href="href"
           class="nav-item flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-muted"

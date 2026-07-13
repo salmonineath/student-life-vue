@@ -23,6 +23,9 @@ interface Group {
   messages: Message[]
 }
 
+// Collapse consecutive messages from the same sender into one visual group
+// (single avatar/name, stacked bubbles) — only checks the immediately
+// preceding message, so a sender re-appearing later starts a new group.
 const groups = computed<Group[]>(() => {
   const out: Group[] = []
   for (const m of props.conversation.messages) {
@@ -35,11 +38,14 @@ const groups = computed<Group[]>(() => {
 
 const scroller = ref<HTMLElement | null>(null)
 function scrollToBottom(): void {
+  // Wait a tick so the DOM reflects the new message before measuring scrollHeight.
   nextTick(() => {
     if (scroller.value) scroller.value.scrollTop = scroller.value.scrollHeight
   })
 }
 
+// Re-scroll to bottom both when switching conversations and when new
+// messages arrive in the current one; `immediate` covers the initial mount.
 watch(
   () => [props.conversation.id, props.conversation.messages.length],
   scrollToBottom,

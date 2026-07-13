@@ -8,7 +8,11 @@ import type { Conversation } from '@/features/groups/types'
 const props = defineProps<{ conversation: Conversation }>()
 defineEmits<{ toggleInfo: [] }>()
 
+// No explicit "is group" flag on Conversation — memberCount is only ever set
+// for group chats, so its presence doubles as the group/DM discriminator.
 const isGroup = computed(() => props.conversation.memberCount != null)
+// "Active now" means different things per type: for a group, at least one
+// member online; for a DM, the other person's own presence.
 const isOnline = computed(() =>
   isGroup.value ? (props.conversation.onlineCount ?? 0) > 0 : props.conversation.presence === 'online',
 )
