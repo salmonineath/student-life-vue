@@ -31,6 +31,8 @@ export const useAppStore = defineStore(
     // --- Getters ---
     const isDark = computed(() => {
       if (theme.value === 'system') {
+        // Guard against SSR/non-browser environments where `window` and
+        // matchMedia don't exist; 'system' theme falls back to light there.
         return (
           typeof window !== 'undefined' &&
           window.matchMedia?.('(prefers-color-scheme: dark)').matches

@@ -12,6 +12,13 @@ import AiPlannerModal from '@/features/assignments/components/AiPlannerModal.vue
 import SparkLayer from '@/features/assignments/components/SparkLayer.vue'
 
 import { useAssignmentStore } from '@/features/assignments/store/useAssignmentStore'
+import {
+  fetchAssignmentsAction,
+  createAssignmentAction,
+  updateAssignmentAction,
+  removeAssignmentAction,
+  toggleCompleteAction,
+} from '@/features/assignments/store/assignments.action'
 import { useToasts } from '@/shared/composables/useToasts'
 import { useConfirm } from '@/shared/composables/useConfirm'
 import { daysLeft, statusOf } from '@/features/assignments/helpers'
@@ -20,7 +27,7 @@ import type { Assignment, AssignmentDraft } from '@/features/assignments/types'
 const router = useRouter()
 const store = useAssignmentStore()
 const { assignments, search, filter, filtered, stats } = storeToRefs(store)
-const { create, update, remove, find, toggleComplete } = store
+const { find } = store
 
 const { push } = useToasts()
 const { confirm } = useConfirm()
@@ -43,12 +50,12 @@ function openEdit(id: number): void {
   formOpen.value = true
 }
 
-function onSubmit(draft: AssignmentDraft): void {
+async function onSubmit(draft: AssignmentDraft): Promise<void> {
   if (editing.value) {
-    update(editing.value.id, draft)
+    await updateAssignmentAction(editing.value.id, draft)
     push('Assignment updated', 'check-check', 'emerald')
   } else {
-    create(draft)
+    await createAssignmentAction(draft)
     push('Assignment created', 'sparkles', 'emerald')
   }
 }
@@ -63,10 +70,14 @@ function openPlanner(id: number | null): void {
 }
 
 // --- Card actions ---
-function onToggle(id: number): void {
+async function onToggle(id: number): Promise<void> {
+  // Snapshot completed-state before/after the API call so the celebratory
+  // toast only fires on the todo/progress → done transition, not on reopen.
   const a = find(id)
-  const becameDone = toggleComplete(id)
-  if (a && becameDone) push(`"${a.title}" completed! 🎉`, 'party', 'emerald')
+  const wasDone = a ? a.completed : false
+  await toggleCompleteAction(id)
+  const nowDone = find(id)?.completed ?? false
+  if (a && !wasDone && nowDone) push(`"${a.title}" completed! 🎉`, 'party', 'emerald')
 }
 
 async function onRemove(id: number): Promise<void> {
@@ -78,7 +89,7 @@ async function onRemove(id: number): Promise<void> {
     danger: true,
   })
   if (!ok) return
-  remove(id)
+  await removeAssignmentAction(id)
   push('Assignment deleted', 'trash', 'danger')
 }
 
@@ -97,6 +108,8 @@ function showReminders(): void {
     return
   }
 
+  // Cap at 3 and stagger by 350ms each so toasts appear one after another
+  // instead of all stacking on screen at once.
   soon.slice(0, 3).forEach((x, i) => {
     window.setTimeout(() => {
       if (x.dl < 0) push(`<b>${x.a.title}</b> is ${Math.abs(x.dl)} day(s) overdue!`, 'alarm', 'danger')
@@ -106,7 +119,10 @@ function showReminders(): void {
   })
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await fetchAssignmentsAction()
+  // Delay reminders until after the list has rendered so they don't compete
+  // with the page's own mount/entry animations.
   window.setTimeout(showReminders, 900)
 })
 </script>

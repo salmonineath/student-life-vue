@@ -8,6 +8,8 @@ import type { Conversation } from '@/features/groups/types'
 const props = defineProps<{ conversation: Conversation; active: boolean }>()
 defineEmits<{ select: [id: number] }>()
 
+// memberCount is only populated for group chats, so its presence is used as
+// the group/DM discriminator (see also ChatHeader.vue, GroupInfoPanel.vue).
 const isGroup = computed(() => props.conversation.memberCount != null)
 </script>
 

@@ -15,6 +15,12 @@ import type { ScheduleEvent, ScheduleEventDraft } from '@/features/schedules/typ
 const store = useScheduleStore()
 const { push } = useToasts()
 
+// Stagger delays (ms) so the on-load toasts read as a sequence rather than
+// all appearing on top of each other at once.
+const BRIEFING_DELAY_MS = 600
+const IMPORTANT_TOAST_DELAY_MS = 450
+const UPCOMING_TOAST_DELAY_MS = 900
+
 // Days passed to the time grid depend on the active view.
 const gridDays = computed(() => (store.view === 'day' ? [store.focusDate] : store.visibleWeek))
 
@@ -82,7 +88,7 @@ function showBriefing(): void {
             'star',
             'amber',
           ),
-        450,
+        IMPORTANT_TOAST_DELAY_MS,
       )
     }
   } else {
@@ -106,13 +112,13 @@ function showBriefing(): void {
     })
     window.setTimeout(
       () => push(`Upcoming: <b>${future.title}</b> on ${label}, ${formatTime(future.start)}.`, 'clock', 'indigo'),
-      900,
+      UPCOMING_TOAST_DELAY_MS,
     )
   }
 }
 
 onMounted(() => {
-  window.setTimeout(showBriefing, 600)
+  window.setTimeout(showBriefing, BRIEFING_DELAY_MS)
 })
 </script>
 

@@ -1,6 +1,6 @@
 import type { AxiosInstance } from 'axios'
 
-import { useAuthStore } from '@/features/auth/store/useAuthStore'
+import { useAuthStore } from '@/features/auth/store/auth.reducer'
 
 /**
  * Attaches request/response interceptors to an Axios instance.

@@ -33,6 +33,11 @@ export function useCountUp(target: Ref<number>, options: UseCountUpOptions = {})
     }
   }
 
+  // Fixed step count and tick interval keep the animation duration roughly
+  // constant (~768ms) regardless of the target value's magnitude.
+  const ANIMATION_STEPS = 24
+  const TICK_MS = 32
+
   function animateTo(value: number): void {
     stopTimer()
     if (value <= 0) {
@@ -40,7 +45,7 @@ export function useCountUp(target: Ref<number>, options: UseCountUpOptions = {})
       return
     }
     let current = 0
-    const step = Math.max(1, Math.round(value / 24))
+    const step = Math.max(1, Math.round(value / ANIMATION_STEPS))
     timer = setInterval(() => {
       current += step
       if (current >= value) {
@@ -48,7 +53,7 @@ export function useCountUp(target: Ref<number>, options: UseCountUpOptions = {})
         stopTimer()
       }
       display.value = current
-    }, 32)
+    }, TICK_MS)
   }
 
   function run(): void {

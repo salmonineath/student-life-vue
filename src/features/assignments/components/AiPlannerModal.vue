@@ -16,6 +16,8 @@ const props = defineProps<{
 const selectedId = ref<number | null>(null)
 const { phase, introHtml, typedText, typingDone, visibleSteps, generate, reset } = usePlanReveal()
 
+// Reset on every open/close so a stale plan from a previous assignment never
+// flashes before the new selection is made.
 watch(open, (isOpen) => {
   reset()
   if (!isOpen) return

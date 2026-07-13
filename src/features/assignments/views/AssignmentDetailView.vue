@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   AlarmClock,
@@ -19,6 +19,12 @@ import AssignmentPlanPanel from '@/features/assignments/components/AssignmentPla
 import InviteMemberModal from '@/features/assignments/components/InviteMemberModal.vue'
 
 import { useAssignmentStore } from '@/features/assignments/store/useAssignmentStore'
+import {
+  fetchAssignmentAction,
+  fetchMembersAction,
+  toggleCompleteAction,
+  createTaskAction,
+} from '@/features/assignments/store/assignments.action'
 import { useToasts } from '@/shared/composables/useToasts'
 import {
   ACCENT_HEX,
@@ -36,6 +42,16 @@ const { push } = useToasts()
 
 const id = computed(() => Number(route.params.id))
 const assignment = computed(() => store.find(id.value))
+
+async function loadDetail(assignmentId: number): Promise<void> {
+  await Promise.all([
+    fetchAssignmentAction(assignmentId),
+    fetchMembersAction(assignmentId),
+  ])
+}
+
+onMounted(() => loadDetail(id.value))
+watch(id, (newId) => loadDetail(newId))
 
 const inviteOpen = ref(false)
 
@@ -81,8 +97,14 @@ function goBack(): void {
   router.push({ name: 'assignments' })
 }
 
-function onAddTasks(titles: string[]): void {
-  const added = store.addTasks(id.value, titles)
+async function onAddTasks(titles: string[]): Promise<void> {
+  let added = 0
+  // Sequential (not Promise.all) so tasks are created — and land in the
+  // task list — in the same order they appear in the AI-generated plan.
+  for (const title of titles) {
+    await createTaskAction(id.value, title)
+    added++
+  }
   if (added) push(`${added} task${added > 1 ? 's' : ''} added from the plan ✨`, 'sparkles', 'indigo')
 }
 </script>
@@ -184,7 +206,7 @@ function onAddTasks(titles: string[]): void {
           <button
             type="button"
             class="h-10 px-4 rounded-xl border border-border text-ink text-[13.5px] font-semibold flex items-center gap-2 hover:bg-bg transition"
-            @click="store.toggleComplete(assignment.id)"
+            @click="toggleCompleteAction(assignment.id)"
           >
             <Check class="h-4 w-4" />
             {{ statusOf(assignment) === 'done' ? 'Reopen' : 'Mark complete' }}

@@ -13,6 +13,18 @@ export interface TaskAttachment {
   size: number
   /** ISO timestamp of when it was attached. */
   uploadedAt: string
+  /** Cloudinary (or other CDN) URL for download / preview. */
+  url?: string
+}
+
+/** Spring Page<T> envelope returned by paginated list endpoints. */
+export interface PaginatedData<T> {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  /** 0-based current page index. */
+  number: number
+  size: number
 }
 
 /** A single checklist item inside a task (Trello-style sub-steps). */

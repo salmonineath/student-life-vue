@@ -25,9 +25,18 @@ import {
   TASK_STATUS_ORDER,
 } from '@/features/assignments/helpers'
 import { useAssignmentStore } from '@/features/assignments/store/useAssignmentStore'
+import {
+  updateTaskAction,
+  setTaskStatusAction,
+  addChecklistItemAction,
+  toggleChecklistItemAction,
+  removeChecklistItemAction,
+  uploadAttachmentAction,
+  removeAttachmentAction,
+} from '@/features/assignments/store/assignments.action'
 import { useConfirm } from '@/shared/composables/useConfirm'
 import { useToasts } from '@/shared/composables/useToasts'
-import type { AssignmentTask } from '@/features/assignments/types'
+import type { AssignmentTask, ChecklistItem, TaskAttachment } from '@/features/assignments/types'
 
 const open = defineModel<boolean>('open', { required: true })
 
@@ -45,7 +54,7 @@ const task = computed(() =>
   props.taskId === null ? undefined : assignment.value?.tasks.find((t) => t.id === props.taskId),
 )
 
-// --- Draft: edits stay local until Save commits them to the store ---
+// --- Draft: edits stay local until Save commits them via API ---
 type TaskDraft = Pick<
   AssignmentTask,
   'title' | 'description' | 'status' | 'checklist' | 'assigneeIds' | 'attachments'
@@ -63,7 +72,16 @@ function snapshot(t: AssignmentTask): TaskDraft {
 }
 
 const draft = ref<TaskDraft | null>(null)
-/** Placeholder ids for items created while drafting; the store assigns real ids on save. */
+const saving = ref(false)
+
+// Originals needed for diffing on save.
+const originalChecklist = ref<ChecklistItem[]>([])
+const originalAttachmentIds = ref<Set<number>>(new Set())
+// File objects for new uploads, keyed by negative temp id.
+const pendingFiles = ref(new Map<number, File>())
+
+// Negative placeholder ids for items added while the modal is open — real ids
+// from the API are always positive, so `id < 0` reliably means "not yet persisted".
 let tempId = -1
 
 watch(
@@ -71,13 +89,18 @@ watch(
   ([isOpen]) => {
     if (isOpen && task.value) {
       draft.value = snapshot(task.value)
+      originalChecklist.value = task.value.checklist.map((c) => ({ ...c }))
+      originalAttachmentIds.value = new Set(task.value.attachments.map((f) => f.id))
+      pendingFiles.value = new Map()
       tempId = -1
     }
   },
   { immediate: true },
 )
 
-/** Anything changed since the modal opened (or was last saved)? */
+// Anything changed since the modal opened (or was last saved)? A JSON-string
+// comparison is a cheap-but-effective deep-equality check here since TaskDraft
+// is plain, serializable data with no functions/dates that would compare unstably.
 const isDirty = computed(
   () =>
     !!task.value &&
@@ -91,7 +114,9 @@ function toggleDone(): void {
   if (draft.value) draft.value.status = draft.value.status === 'done' ? 'todo' : 'done'
 }
 
-// Close automatically if the task disappears (e.g. deleted) — nothing to keep.
+// Close automatically if the task disappears (e.g. deleted from the list behind
+// this modal) — nothing to keep, and bypassing requestClose avoids an
+// unnecessary "unsaved changes" prompt for a task that no longer exists.
 watch(
   () => task.value,
   (t) => {
@@ -131,15 +156,17 @@ function toggleAssignee(memberId: number): void {
     : [...draft.value.assigneeIds, memberId]
 }
 
-// --- Attachments (draft-local; plain files — no side effects on status/progress) ---
+// --- Attachments (draft-local; uploaded to Cloudinary on Save) ---
 const fileInput = ref<HTMLInputElement | null>(null)
 function onFilesChosen(e: Event): void {
   const input = e.target as HTMLInputElement
   const files = Array.from(input.files ?? [])
   if (files.length && draft.value) {
     for (const file of files) {
+      const tid = tempId--
+      pendingFiles.value.set(tid, file)
       draft.value.attachments.push({
-        id: tempId--,
+        id: tid,
         name: file.name,
         size: file.size,
         uploadedAt: new Date().toISOString(),
@@ -154,12 +181,72 @@ function removeAttachment(attachmentId: number): void {
     draft.value.attachments = draft.value.attachments.filter((f) => f.id !== attachmentId)
 }
 
-// --- Save / close ---
-function save(): void {
-  if (!task.value || !draft.value) return
-  store.applyTaskDraft(props.assignmentId, task.value.id, draft.value)
-  push('Task saved', 'check', 'emerald')
-  close()
+// --- Save: commit all draft changes via API ---
+async function save(): Promise<void> {
+  if (!task.value || !draft.value || saving.value) return
+  saving.value = true
+  try {
+    const taskId = task.value.id
+    const d = draft.value
+
+    // 1. Main task fields + assignees.
+    await updateTaskAction(taskId, {
+      title: d.title,
+      description: d.description,
+      assigneeIds: d.assigneeIds,
+    })
+
+    // 2. Status (separate PATCH endpoint).
+    if (d.status !== task.value.status) {
+      await setTaskStatusAction(taskId, d.status)
+    }
+
+    // 3. Checklist: remove deleted, sync toggled, add new.
+    // Diff against the snapshot taken when the modal opened to figure out what
+    // actually changed, since the draft has no per-item dirty tracking of its own.
+    const origMap = new Map(originalChecklist.value.map((c) => [c.id, c]))
+    const draftExisting = d.checklist.filter((c) => c.id > 0)
+    const draftExistingIds = new Set(draftExisting.map((c) => c.id))
+
+    await Promise.all([
+      // Removed items.
+      ...[...origMap.keys()]
+        .filter((id) => !draftExistingIds.has(id))
+        .map((id) => removeChecklistItemAction(taskId, id)),
+      // Toggled items.
+      ...draftExisting
+        .filter((c) => origMap.get(c.id)?.done !== c.done)
+        .map((c) => toggleChecklistItemAction(taskId, c.id, c.done)),
+    ])
+    // New items — sequential to keep display order.
+    for (const c of d.checklist.filter((c) => c.id < 0)) {
+      await addChecklistItemAction(taskId, c.text)
+    }
+
+    // 4. Attachments: remove deleted, upload new. Negative-id attachments are
+    // local File objects held in pendingFiles that haven't hit Cloudinary yet.
+    const draftAttIds = new Set(d.attachments.filter((f) => f.id > 0).map((f) => f.id))
+    await Promise.all([
+      // Removed.
+      ...[...originalAttachmentIds.value]
+        .filter((id) => !draftAttIds.has(id))
+        .map((id) => removeAttachmentAction(taskId, id)),
+      // Uploaded.
+      ...d.attachments
+        .filter((f) => f.id < 0)
+        .map((f) => {
+          const file = pendingFiles.value.get(f.id)
+          return file ? uploadAttachmentAction(taskId, file) : Promise.resolve(undefined)
+        }),
+    ])
+
+    push('Task saved', 'check', 'emerald')
+    close()
+  } catch {
+    push('Failed to save task. Please try again.', 'x', 'danger')
+  } finally {
+    saving.value = false
+  }
 }
 
 function close(): void {
@@ -230,10 +317,16 @@ watch(open, (isOpen) => {
             type="button"
             class="h-9 px-4 flex items-center gap-1.5 rounded-xl text-white text-[13px] font-semibold shadow-md shadow-emerald/20 transition hover:-translate-y-0.5 disabled:opacity-40 disabled:shadow-none disabled:hover:translate-y-0 disabled:cursor-not-allowed"
             style="background: linear-gradient(135deg, var(--emerald), var(--emerald-dark))"
-            :disabled="!isDirty"
+            :disabled="!isDirty || saving"
             @click="save"
           >
-            <Save class="h-4 w-4" /> Save
+            <template v-if="saving">
+              <span class="task-spinner" aria-hidden="true" />
+              Saving…
+            </template>
+            <template v-else>
+              <Save class="h-4 w-4" /> Save
+            </template>
           </button>
           <button
             type="button"
@@ -440,3 +533,15 @@ watch(open, (isOpen) => {
     </div>
   </Teleport>
 </template>
+
+<style scoped>
+.task-spinner {
+  height: 0.875rem;
+  width: 0.875rem;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>

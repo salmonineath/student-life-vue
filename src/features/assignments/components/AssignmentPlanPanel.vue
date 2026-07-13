@@ -11,7 +11,9 @@ const emit = defineEmits<{ addTasks: [titles: string[]] }>()
 
 const { phase, introHtml, typedText, typingDone, visibleSteps, lastSteps, generate } = usePlanReveal()
 
-// Show "add as tasks" only once the steps have finished revealing.
+// Show "add as tasks" only once the steps have finished revealing. visibleSteps
+// fills in one-by-one via a timer in usePlanReveal, so comparing its length to
+// the full lastSteps list is how we detect the reveal animation has completed.
 const allRevealed = computed(
   () => phase.value === 'plan' && visibleSteps.value.length === lastSteps.value.length && lastSteps.value.length > 0,
 )

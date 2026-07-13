@@ -52,6 +52,8 @@ export function usePlanReveal() {
     let i = 0
     typingDone.value = false
     typedText.value = ''
+    // 2 chars per 16ms tick (~120 chars/sec) reads as a natural typing speed
+    // without needing a timer per character.
     typer = setInterval(() => {
       i += 2
       typedText.value = text.slice(0, i)
@@ -65,6 +67,8 @@ export function usePlanReveal() {
   }
 
   function revealSteps(steps: PlanStep[]): void {
+    // Stagger each step's appearance by 260ms so they pop in one at a time
+    // rather than all at once.
     steps.forEach((step, idx) => {
       timers.push(
         setTimeout(() => {
@@ -78,6 +82,8 @@ export function usePlanReveal() {
   function generate(assignment: Assignment): void {
     reset()
     phase.value = 'thinking'
+    // Artificial 1.1s "thinking" delay before the (instantly-computed) plan
+    // appears, so the AI planner reads as deliberating rather than instant.
     timers.push(
       setTimeout(() => {
         const plan = buildStudyPlan(assignment)

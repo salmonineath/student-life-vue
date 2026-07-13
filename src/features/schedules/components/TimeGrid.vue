@@ -29,15 +29,20 @@ const gridTemplate = computed(() => `60px repeat(${props.days.length}, minmax(0,
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+// Small visual gutters so adjacent blocks/lanes never touch edge-to-edge.
+const BLOCK_GAP_PX = 3
+const MIN_BLOCK_HEIGHT_PX = 18
+const LANE_GAP_PX = 2
+
 /** Absolute position for one laid-out event. */
 function blockStyle(start: string, end: string, lane: number, lanes: number) {
   const top = ((timeToMinutes(start) - START_HOUR * 60) / 60) * HOUR_PX
   const height = ((timeToMinutes(end) - timeToMinutes(start)) / 60) * HOUR_PX
   return {
     top: `${top}px`,
-    height: `${Math.max(height - 3, 18)}px`,
-    left: `calc(${(lane / lanes) * 100}% + 2px)`,
-    width: `calc(${100 / lanes}% - 4px)`,
+    height: `${Math.max(height - BLOCK_GAP_PX, MIN_BLOCK_HEIGHT_PX)}px`,
+    left: `calc(${(lane / lanes) * 100}% + ${LANE_GAP_PX}px)`,
+    width: `calc(${100 / lanes}% - ${LANE_GAP_PX * 2}px)`,
   }
 }
 
@@ -53,6 +58,8 @@ const nowOffset = computed<number | null>(() => {
   return ((mins - START_HOUR * 60) / 60) * HOUR_PX
 })
 
+// Converts a click's pixel offset into a snapped 30-minute start time and
+// creates a default 1-hour draft event there, clamped to stay on the grid.
 function onColumnClick(d: Date, e: MouseEvent): void {
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
   const y = e.clientY - rect.top

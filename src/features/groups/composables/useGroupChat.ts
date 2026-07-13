@@ -17,6 +17,8 @@ export function useGroupChat() {
   const showInfo = ref(true)
   const activeId = ref<number>(conversations.value[0]?.id ?? 0)
 
+  // Starts well above the highest seeded message id (each conversation's ids
+  // restart from 1) so new messages never collide with existing ones.
   let messageSeq = 1000
 
   const generalCount = computed(() => conversations.value.filter((c) => !c.archived).length)
@@ -26,6 +28,8 @@ export function useGroupChat() {
   const visibleConversations = computed(() => {
     const q = search.value.toLowerCase().trim()
     return conversations.value.filter((c) => {
+      // Exclude conversations that don't belong to the selected tab: on the
+      // archive tab drop non-archived ones, on general drop archived ones.
       if (tab.value === 'archive' ? !c.archived : c.archived) return false
       if (!q) return true
       return `${c.name} ${c.subtitle ?? ''} ${c.preview ?? ''}`.toLowerCase().includes(q)
@@ -42,6 +46,9 @@ export function useGroupChat() {
   /** Resolve a sender id to a member (for avatars/names in the thread). */
   function memberOf(conversation: Conversation, senderId: number): Member {
     return (
+      // Prefer the conversation's own member list (has group-specific presence/admin
+      // flags); fall back to the global directory, then a bare placeholder so
+      // rendering never breaks on an unrecognized id.
       conversation.members.find((m) => m.id === senderId) ??
       Object.values(PEOPLE).find((p) => p.id === senderId) ?? { id: senderId, name: 'Member' }
     )
@@ -79,6 +86,9 @@ export function useGroupChat() {
       text: body,
       status: 'sent',
     })
+    // Keep the conversation-list preview in sync with the message just sent,
+    // and clear any stale typing indicator since the other side's "typing…"
+    // no longer applies once we've replied.
     c.preview = body
     c.previewSender = undefined
     c.previewRead = true
